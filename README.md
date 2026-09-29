@@ -2,9 +2,6 @@
 
 OpenAI MCP Extensions adds ChatGPT-specific capabilities to MCP so developers can build plugins that feel like native, first-class features.
 
-> [!IMPORTANT]
-> This library is currently in alpha. APIs may change, be added, or be removed without warning.
-
 ## Showcase
 
 All examples below use the Bits & Bolts plugin, which you can try by [installing the plugin](#0-try-it-out).
@@ -39,17 +36,8 @@ Let users select a CAD part using thumbnail choices.
 
 Install the Bits & Bolts plugin:
 
-1. Make sure [Node.js 22 or newer](https://nodejs.org/en/download) is installed.
-2. Download and extract the [latest marketplace](https://github.com/OpenAI-Early-Access/mcp-extensions/releases/download/marketplace-latest/marketplace.zip), then install from the extracted directory. The download requires access to this repository.
-
-   ```sh
-   cd mcp-extensions-early-access
-   codex plugin marketplace add .
-   codex plugin add bits-and-bolts@mcp-extensions-early-access
-   ```
-
-3. Fully quit and reopen the Codex desktop app.
-4. Select **Bits & Bolts** in the sidebar to open the **Parts Library**.
+1. Install [Bits & Bolts from the plugin directory](https://chatgpt.com/plugins/plugin_asdk_app_6abadab6e7d881919e7491d52c7846e8).
+2. Select **Bits & Bolts** in the sidebar to open the **Parts Library**.
 
    ![Bits & Bolts selected in the sidebar with the Parts Library open](resources/01-global-library.png)
 
