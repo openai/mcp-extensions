@@ -1,6 +1,6 @@
 # Releasing the Python and Node packages
 
-Python (`openai-mcp-extensions`) and Node (`@openai/mcp-extensions`) have **independent versions and release PRs**. A Python change does not require a Node release, or vice versa. The existing `v0.1.0` GitHub release is historical; new tags are `python-v<version>` and `node-v<version>`.
+Python (`openai-mcp-extensions`) and Node (`@openai/mcp-extensions`) have **independent versions and release PRs**. A Python change does not require a Node release, or vice versa. The Early-Access repository's `v0.1.0` GitHub release is historical and is not imported into the fresh destination; new tags are `python-v<version>` and `node-v<version>`.
 
 ## What is configured in code
 
@@ -23,7 +23,7 @@ The old merged-PR `release` label workflow is replaced. Do not manually bump bot
 | `PUBLISH_PYPI_ENABLED`   | Public PyPI uploads after a Python release |
 | `PUBLISH_NPM_ENABLED`    | Public npm uploads after a Node release    |
 
-Registry upload jobs also require the exact repository identity `openai/mcp-extensions`. Both that repository and `OpenAI-Early-Access/mcp-extensions` existed when this setup was prepared; coordinate which repository will become the production home before enabling publishing. Copying code alone does not transfer repository settings or optional GitHub App access. If copying into the existing destination rather than transferring history, set `bootstrap-sha` in `release-please-config.json` to the destination main commit immediately before the import. The workflow checks that the configured cutoff exists in main history before it allows release-please to run.
+Registry upload jobs also require the exact repository identity `openai/mcp-extensions`. This is the production destination, and it must remain private. No package may be uploaded before the approved September 29, 2026 launch time. Copying code alone does not transfer repository settings or optional GitHub App access. For a fresh repository, import the reviewed source as its root commit with release-please disabled, then set `bootstrap-sha` to that new root commit in a follow-up change before activation. There is no pre-import destination commit in an empty repository. The workflow checks that the configured cutoff exists in main history before it allows release-please to run. This checkout uses that root commit as its cutoff; if the import commit changes, update the cutoff again.
 
 1. **No SDK GitHub App is required.** Release-please defaults to the repository's built-in `GITHUB_TOKEN`, with Contents, Issues, and Pull requests write permissions scoped to its job. In **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**. Organization policy must permit this setting; the workflow does not approve or merge PRs. No PAT or new secret is needed. GitHub places CI for PRs created or updated with `GITHUB_TOKEN` in an approval-required state: review the generated changes, select **Approve workflows to run** in the release PR's merge box, and wait for the required `check` before merging. See [GitHub's workflow trigger behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
