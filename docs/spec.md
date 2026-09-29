@@ -13,23 +13,23 @@ This spec outlines every extension and exactly how it builds on top of the exist
 
 ## Platform Support
 
-"Planned" means planned for DevDay. Web refers to the Work browser; classic ChatGPT is excluded.
+This table describes expected support at DevDay launch. Web refers to the Work browser; classic ChatGPT is excluded. Asterisks indicate platform limitations described in the corresponding sections.
 
-| Feature                                             | Desktop   | Web           | iOS           | Android       |
-| --------------------------------------------------- | --------- | ------------- | ------------- | ------------- |
-| [Global entrypoint](#global-entrypoint)             | Supported | Planned       | Planned       | Planned       |
-| [Thread entrypoint](#thread-entrypoint)             | Supported | Planned       | Planned       | Planned       |
-| [File entrypoint](#file-extension-entrypoint)       | Supported | Planned       | Not supported | Not supported |
-| [Structured settings](#structured-settings)         | Supported | Planned       | Planned       | Planned       |
-| [Resource display modes](#display-modes)            | Supported | Planned       | Planned       | Planned       |
-| [MCP App deep links](#deep-links)                   | Supported | Planned       | Planned       | Planned       |
-| [Messages](#uimessage-extensions)                   | Supported | Planned       | Planned       | Planned       |
-| [Plugin onboarding](#plugin-onboarding)             | Supported | Planned       | Planned       | Planned       |
-| [Model context](#uiupdate-model-context-extensions) | Supported | Planned       | Planned       | Planned       |
-| [File opening](#opening-local-files)                | Supported | Planned       | Not supported | Not supported |
-| [File resources](#filesystem-access)                | Supported | Planned       | Not supported | Not supported |
-| [Composer at-mentions](#composer-at-mentions)       | Supported | Not supported | Not supported | Not supported |
-| [OpenAI form elicitation](#openai-form-elicitation) | Supported | Planned       | Planned       | Planned       |
+| Feature                                             | Desktop       | Web           | iOS                                 | Android                             |
+| --------------------------------------------------- | ------------- | ------------- | ----------------------------------- | ----------------------------------- |
+| [Global entrypoint](#global-entrypoint)             | Supported     | Supported     | Supported                           | Supported                           |
+| [Thread entrypoint](#thread-entrypoint)             | Supported     | Supported     | Supported                           | Supported                           |
+| [File entrypoint](#file-extension-entrypoint)       | Supported     | Not supported | Not supported                       | Not supported                       |
+| [Structured settings](#structured-settings)         | Supported     | Supported     | Supported                           | Supported                           |
+| [Resource display modes](#display-modes)            | Supported     | Supported     | Supported                           | Supported                           |
+| [MCP App deep links](#deep-links)                   | Supported     | Supported     | Supported                           | Not supported                       |
+| [Messages](#uimessage-extensions)                   | Supported     | Supported     | [Supported*](#uimessage-extensions) | [Supported*](#uimessage-extensions) |
+| [Plugin onboarding](#plugin-onboarding)             | Supported     | Supported     | Supported                           | Supported                           |
+| [Model context](#uiupdate-model-context-extensions) | Supported     | Supported     | [Supported*](#thumbnails)           | Supported                           |
+| [File opening](#opening-local-files)                | Supported     | Not supported | Not supported                       | Not supported                       |
+| [File resources](#filesystem-access)                | Supported     | Not supported | Not supported                       | Not supported                       |
+| [Composer at-mentions](#composer-at-mentions)       | Supported     | Not supported | Not supported                       | Not supported                       |
+| [OpenAI form elicitation](#openai-form-elicitation) | Supported     | Supported     | Not supported                       | Not supported                       |
 
 ## MCP App Entrypoints
 
@@ -1056,6 +1056,10 @@ MCP Apps MAY set `_meta["openai/thumbnail"]` to an `MCP.Icon` on `text` content 
 
 A square image of at least 128 × 128 pixels is recommended for thumbnails.
 
+#### Behavior Details
+
+- `openai/thumbnail` is not yet supported on iOS.
+
 #### Examples
 
 Text block in `ui/update-model-context` with a thumbnail:
@@ -1138,7 +1142,7 @@ MCP App `initialize` result:
 
 ### Behavior Details
 
-- Messages support the [same content types](#supported-content) as `ui/update-model-context`.
+- Messages support the [same content types](#supported-content) as `ui/update-model-context`, except resource links on iOS.
 
 ### Titles
 
@@ -1155,7 +1159,7 @@ This extension adds metadata to [`ui/message`](https://github.com/modelcontextpr
 #### Behavior Details
 
 - Defaults when undefined: `{ target: "active", send: true }`.
-- Sending to a new conversation (`target: "new"`) is not supported on iOS or Android.
+- On iOS and Android, only `{ target: "active", send: true }` is supported.
 
 #### Schema
 
@@ -1603,6 +1607,7 @@ Resource selection supports supplied resources, user-added files or directories,
 - Servers declare resource inputs by adding an `x-openai-input` to a `string` (single-select) or `array` (multi-select) form field.
 - Single-select fields submit a URI string.
 - Multi-select fields submit an array of URI strings.
+- On web, forms requested through MCP Apps support only explicit resource selection without user uploads.
 
 Implicit selection always allows user uploads. When `userOptions` is omitted, it defaults to `{ kind: "file" }` with no file-type restrictions. Explicit selection shows no upload input when `userOptions` is omitted.
 
