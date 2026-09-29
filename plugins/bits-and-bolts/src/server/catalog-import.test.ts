@@ -26,6 +26,8 @@ test("path imports validate and read one bounded file handle", async (t) => {
     let afterStat = async () => {};
     const handles: Array<Awaited<ReturnType<typeof fs.open>>> = [];
     let bytesRead = 0;
+    let maxReadBytes = Infinity;
+    const readBuffers = new Set<ArrayBufferLike>();
     // Hook both stat APIs so the same deterministic replacement also exercises
     // the original pathname-based implementation when checking the regression.
     t.mock.method(fs, "stat", async (file: string) => {
@@ -44,11 +46,24 @@ test("path imports validate and read one bounded file handle", async (t) => {
           return stats;
         });
         const read = handle.read.bind(handle);
-        t.mock.method(handle, "read", async (buffer: Buffer) => {
-          const result = await read(buffer);
-          bytesRead += result.bytesRead;
-          return result;
-        });
+        t.mock.method(
+          handle,
+          "read",
+          async (
+            buffer: Buffer,
+            offset = 0,
+            length = buffer.length - offset,
+          ) => {
+            readBuffers.add(buffer.buffer);
+            const result = await read(
+              buffer,
+              offset,
+              Math.min(length, maxReadBytes),
+            );
+            bytesRead += result.bytesRead;
+            return result;
+          },
+        );
       }
       return handle;
     });
@@ -88,6 +103,55 @@ test("path imports validate and read one bounded file handle", async (t) => {
       },
     );
     afterStat = async () => {};
+    await t.test(
+      "short reads preserve bytes without retaining a buffer per read",
+      async () => {
+        await fs.writeFile(sourcePath, original);
+        maxReadBytes = 3;
+        readBuffers.clear();
+        try {
+          const part = await importPartFromPath(sourcePath);
+          assert.deepEqual((await readPartBytes(part.id)).bytes, original);
+          assert.equal(readBuffers.size, 1);
+        } finally {
+          maxReadBytes = Infinity;
+        }
+      },
+    );
+    await t.test(
+      "all supported formats and multi-chunk files retain their bytes",
+      async () => {
+        const bytes = Buffer.alloc(128 * 1024 + 7);
+        for (let index = 0; index < bytes.length; index++)
+          bytes[index] = index % 251;
+        await fs.writeFile(sourcePath, bytes);
+        for (const format of ["stl", "3mf", "step", "stp"] as const) {
+          const part = await importPartFromPath(sourcePath, `model.${format}`);
+          assert.equal(part.format, format);
+          assert.deepEqual((await readPartBytes(part.id)).bytes, bytes);
+        }
+        await assert.rejects(
+          importPartFromPath(sourcePath, "model.txt"),
+          /Supported CAD formats/,
+        );
+      },
+    );
+    await t.test(
+      "a file shortened after stat imports its remaining bytes",
+      async () => {
+        await fs.writeFile(sourcePath, original);
+        afterStat = () => fs.truncate(sourcePath, 7);
+        try {
+          const part = await importPartFromPath(sourcePath);
+          assert.deepEqual(
+            (await readPartBytes(part.id)).bytes,
+            original.subarray(0, 7),
+          );
+        } finally {
+          afterStat = async () => {};
+        }
+      },
+    );
     await t.test(
       "ordinary symlinks and the exact size limit remain supported",
       async () => {

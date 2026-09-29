@@ -291,10 +291,21 @@ export async function importPartFromPath(
       const chunk = Buffer.alloc(
         Math.min(64 * 1024, maxImportBytes + 1 - total),
       );
-      const { bytesRead } = await source.read(chunk);
-      if (bytesRead === 0) break;
-      chunks.push(chunk.subarray(0, bytesRead));
-      total += bytesRead;
+      // Fill each chunk across short reads so tiny reads cannot retain a full
+      // allocation apiece.
+      let used = 0;
+      while (used < chunk.length) {
+        const { bytesRead } = await source.read(
+          chunk,
+          used,
+          chunk.length - used,
+        );
+        if (bytesRead === 0) break;
+        used += bytesRead;
+      }
+      chunks.push(chunk.subarray(0, used));
+      total += used;
+      if (used < chunk.length) break;
     }
     if (total > maxImportBytes) {
       throw new Error(
