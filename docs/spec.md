@@ -6,8 +6,8 @@ The MCP spec provides capabilities that work across MCP hosts. These extensions 
 
 This spec outlines every extension and exactly how it builds on top of the existing MCP spec. In most cases, it is easier to use these extensions via our TypeScript and Python SDKs:
 
-- [TypeScript SDK](https://github.com/OpenAI-Early-Access/mcp-extensions/blob/main/typescript/README.md) (MCP Servers and MCP Apps)
-- [Python SDK](https://github.com/OpenAI-Early-Access/mcp-extensions/blob/main/python/README.md)
+- [TypeScript SDK](../typescript/README.md) (MCP Servers and MCP Apps)
+- [Python SDK](../python/README.md)
 
 `MCP.<Type>` refers to the corresponding type in the [MCP schema reference](https://modelcontextprotocol.io/specification/2026-07-28/schema).
 

@@ -8,7 +8,7 @@ Install the Python extension SDK directly from this repository.
 
 ```sh
 uv add \
-  "git+https://github.com/OpenAI-Early-Access/mcp-extensions.git#subdirectory=python"
+  "git+https://github.com/openai/mcp-extensions.git#subdirectory=python"
 ```
 
 ## Server Setup
