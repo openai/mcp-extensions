@@ -67,6 +67,7 @@ export function isValidFileSelection(
 ): boolean {
   const selected = Array.isArray(value) ? value : [value];
   return (
+    input.selection === "implicit" ||
     input.userOptions != null ||
     selected.every((uri) => input.options.some((option) => option.uri === uri))
   );

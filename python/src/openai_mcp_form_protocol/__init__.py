@@ -142,6 +142,8 @@ class _ResourceInput(FormModel):
 
     @model_validator(mode="after")
     def validate_options(self) -> _ResourceInput:
+        if self.selection == "implicit" and self.user_options is None:
+            self.user_options = _UserResourceOptions()
         if any(not _valid_uri(option.uri) for option in self.options):
             raise ValueError("Resource input contains an invalid URI")
         if len({option.uri for option in self.options}) != len(self.options):

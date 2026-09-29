@@ -30,8 +30,9 @@ def resource_input(
 ) -> dict[str, JsonValue]:
     """Build resource-picker metadata for ``Field(json_schema_extra=...)``.
 
-    Omit ``user_options`` to limit selection to suggestions. Pass ``UserResourceOptions()``
-    to allow user-selected files. The field's type determines single or multiple selection.
+    Implicit selection always allows user-selected files. Otherwise, pass
+    ``UserResourceOptions()`` to allow them. The field's type determines single or multiple
+    selection.
     """
     return _input("resource", options, selection, user_options)
 

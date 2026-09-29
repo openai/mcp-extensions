@@ -1604,6 +1604,8 @@ Resource selection supports supplied resources, user-added files or directories,
 - Single-select fields submit a URI string.
 - Multi-select fields submit an array of URI strings.
 
+Implicit selection always allows user uploads. When `userOptions` is omitted, it defaults to `{ kind: "file" }` with no file-type restrictions. Explicit selection shows no upload input when `userOptions` is omitted.
+
 Resource options may include a thumbnail (`_meta["openai/thumbnail"]: MCP.Icon`), a preview (`_meta["openai/preview"]: { target: PreviewTarget }`), or both.
 
 ##### Explicit vs Implicit Selection
@@ -1628,7 +1630,7 @@ interface ResourceInput {
   selection?: "explicit" | "implicit";
   /** Server-provided entries. May be empty. */
   options: MCP.Resource[];
-  /** Enables the user to select additional options via a file explorer. */
+  /** Configures user-added resources. */
   userOptions?: UserResourceOptions;
 }
 
