@@ -34,12 +34,12 @@ Let users select a CAD part using thumbnail choices.
 
 ### 0. Try it out
 
-Install the Bits & Bolts plugin:
+Install the Bits & Bolts Remote plugin:
 
-1. Install [Bits & Bolts from the plugin directory](https://chatgpt.com/plugins/plugin_asdk_app_6abadab6e7d881919e7491d52c7846e8).
-2. Select **Bits & Bolts** in the sidebar to open the **Parts Library**.
+1. Install [Bits & Bolts Remote from the plugin directory](https://chatgpt.com/plugins/plugin_asdk_app_6abadab6e7d881919e7491d52c7846e8).
+2. Select **Bits & Bolts Remote** in the sidebar to open the **Parts Library**.
 
-   ![Bits & Bolts selected in the sidebar with the Parts Library open](resources/01-global-library.png)
+   ![Bits & Bolts Remote selected in the sidebar with the Parts Library open](resources/01-global-library.png)
 
 ### 1. Create a plugin
 
