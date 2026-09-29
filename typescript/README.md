@@ -6,14 +6,11 @@ Use `@openai/mcp-extensions/server` for server code and `@openai/mcp-extensions/
 
 ## Installation
 
-Build and pack the SDK from a checkout of this repository:
+Install the SDK from npm:
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm --dir typescript pack --pack-destination ..
+pnpm add @openai/mcp-extensions
 ```
-
-Run these commands from the repository root, then install the generated archive in your project with `pnpm add /path/to/openai-mcp-extensions-0.1.0.tgz`.
 
 ## MCP Server Setup
 

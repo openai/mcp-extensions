@@ -4,11 +4,10 @@ The Python SDK provides server-side OpenAI extensions for the official MCP Pytho
 
 ## Installation
 
-Install the Python extension SDK directly from this repository.
+Install the Python extension SDK from PyPI.
 
 ```sh
-uv add \
-  "git+https://github.com/openai/mcp-extensions.git#subdirectory=python"
+uv add openai-mcp-extensions
 ```
 
 ## Server Setup
