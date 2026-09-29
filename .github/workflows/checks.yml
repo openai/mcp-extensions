@@ -98,6 +98,7 @@ jobs:
           pyright --project python/pyproject.toml
           python -c "import openai_mcp_extensions"
           python -m unittest discover -s .github/scripts -p 'test_*.py'
+          python -m unittest discover -s python/tests -p 'test_*.py'
 
       - name: Build and check release distributions
         env:
