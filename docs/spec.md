@@ -1,6 +1,6 @@
 # OpenAI MCP Extensions Specification
 
-This specification defines extensions to [MCP](https://modelcontextprotocol.io/specification/2025-11-25/index) and [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx) for use across ChatGPT, including ChatGPT Work, ChatGPT Desktop, and ChatGPT mobile apps.
+This specification defines extensions to [MCP](https://modelcontextprotocol.io/specification/2025-11-25/index) and [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/c55a3a231fb76303376e059aef9a13367e72731c/specification/draft/apps.mdx) for use across ChatGPT, including ChatGPT Work, ChatGPT Desktop, and ChatGPT mobile apps.
 
 The MCP spec provides capabilities that work across MCP hosts. These extensions allow deeper integration into ChatGPT, enabling you to build richer features for your users than the standard MCP spec allows.
 
@@ -33,7 +33,7 @@ This table describes expected support at DevDay launch. Web refers to the Work b
 
 ## MCP App Entrypoints
 
-Normally, [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx) can only be invoked via the model. However, it may be convenient to allow users to open your MCP App via static entrypoints.
+Normally, [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/c55a3a231fb76303376e059aef9a13367e72731c/specification/draft/apps.mdx) can only be invoked via the model. However, it may be convenient to allow users to open your MCP App via static entrypoints.
 
 MCP Servers SHOULD provide a unique title for each thread entrypoint that describes the view’s contents and differs from the plugin name. For example, the Bits & Bolts plugin has a thread entrypoint titled `Parts Tray`.
 
@@ -151,7 +151,7 @@ Deep links navigate directly to a particular page within a global entrypoint.
       - The complete app-relative URL, including any query string, MUST be percent-encoded as the `path` query value.
       - The decoded app-relative URL MUST begin with `/` and MUST NOT contain a fragment.
       - If `path` is omitted, the app-relative URL defaults to `/`.
-- MCP Apps receive the specified app-relative URL in `hostContext["openai/deepLink"]` during initialization and through subsequent `ui/notifications/host-context-changed` notifications, following [MCP Apps host-context update semantics](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#L1461-L1471).
+- MCP Apps receive the specified app-relative URL in `hostContext["openai/deepLink"]` during initialization and through subsequent `ui/notifications/host-context-changed` notifications, following [MCP Apps host-context update semantics](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#L1219-L1229).
 
 Web link format:
 
@@ -850,7 +850,7 @@ Request:
 
 ## Display Modes
 
-The MCP Apps specification defines [display modes](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#display-modes) to make it explicit where MCP Apps can be rendered and where they are currently rendered.
+The MCP Apps specification defines [display modes](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#display-modes) to make it explicit where MCP Apps can be rendered and where they are currently rendered.
 
 ![Bits & Bolts in inline and fullscreen display modes](resources/11-display-modes.png)
 
@@ -860,7 +860,7 @@ ChatGPT uses the `fullscreen` display mode for all entrypoints specified above.
 
 Some model-initiated MCP Apps are more useful to the user when rendered `fullscreen` because they don't scroll off screen as the chat progresses. However, by default, all MCP Apps invoked by the model are displayed inline first.
 
-`_meta["openai/ui"]["availableDisplayModes"]` lets MCP Servers declare which display modes their MCP App supports in resource metadata. Servers that advertise [`appCapabilities.availableDisplayModes`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#declaring-support) SHOULD also set this field so ChatGPT can render the app in a supported display mode before initialization, giving users faster visual feedback.
+`_meta["openai/ui"]["availableDisplayModes"]` lets MCP Servers declare which display modes their MCP App supports in resource metadata. Servers that advertise [`appCapabilities.availableDisplayModes`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#declaring-support) SHOULD also set this field so ChatGPT can render the app in a supported display mode before initialization, giving users faster visual feedback.
 
 `_meta["openai/ui"]["preferredDisplayMode"]` is an extension that allows MCP Servers to indicate which `displayMode` the MCP App would prefer to be rendered with first.
 
@@ -1114,7 +1114,7 @@ Request:
 
 ## `ui/message` Extensions
 
-This extension adds metadata to [`ui/message`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#mcp-apps-specific-messages) to control its behavior in ChatGPT.
+This extension adds metadata to [`ui/message`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#mcp-apps-specific-messages) to control its behavior in ChatGPT.
 
 ### Capability Advertisement
 
@@ -1154,7 +1154,7 @@ MCP Apps SHOULD NOT display titled text items as selected. Apps are not notified
 
 ### Prompt Target and Send Behavior
 
-This extension adds metadata to [`ui/message`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#mcp-apps-specific-messages) to control its behavior in ChatGPT.
+This extension adds metadata to [`ui/message`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#mcp-apps-specific-messages) to control its behavior in ChatGPT.
 
 #### Behavior Details
 
