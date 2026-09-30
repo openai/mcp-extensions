@@ -29,7 +29,7 @@ This table describes current production support. Web refers to ChatGPT Work in t
 | [File opening](#opening-local-files)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
 | [File resources](#filesystem-access)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
 | [Composer at-mentions](#composer-at-mentions)       | Supported | Not supported                                    | Not supported                       | Not supported                       |
-| [OpenAI form elicitation](#openai-form-elicitation) | Supported | [Supported*](#resource-selection)                   | Not supported                       | Not supported                       |
+| [OpenAI form elicitation](#openai-form-elicitation) | Supported | [Supported*](#resource-selection)                | Not supported                       | Not supported                       |
 
 ## MCP App Entrypoints
 
