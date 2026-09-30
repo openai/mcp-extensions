@@ -1,5 +1,9 @@
 # OpenAI MCP Extensions Specification
 
+For app design and compatibility guidance, see:
+
+[docs/patterns.md](patterns.md)
+
 This specification defines extensions to [MCP](https://modelcontextprotocol.io/specification/2025-11-25/index) and [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/c55a3a231fb76303376e059aef9a13367e72731c/specification/draft/apps.mdx) for use across ChatGPT, including ChatGPT Work, ChatGPT Desktop, and ChatGPT mobile apps.
 
 The MCP spec provides capabilities that work across MCP hosts. These extensions allow deeper integration into ChatGPT, enabling you to build richer features for your users than the standard MCP spec allows.
@@ -35,8 +39,6 @@ This table describes expected support at DevDay launch. Web refers to the Work b
 
 Normally, [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/c55a3a231fb76303376e059aef9a13367e72731c/specification/draft/apps.mdx) can only be invoked via the model. However, it may be convenient to allow users to open your MCP App via static entrypoints.
 
-MCP Servers SHOULD provide a unique title for each thread entrypoint that describes the view’s contents and differs from the plugin name. For example, the Bits & Bolts plugin has a thread entrypoint titled `Parts Tray`.
-
 You can define up to three entrypoints on any MCP App:
 
 - Global: Available in the primary sidebar navigation.
@@ -47,20 +49,10 @@ You can define up to three entrypoints on any MCP App:
 
 - Entrypoints are registered by adding one or more entries to `_meta["openai/ui"]["entrypoints"]`, as defined below.
 - `_meta["ui"]["visibility"]` normally controls model versus user visibility. This field is ignored when an MCP App is invoked as an entrypoint.
-- MCP Apps SHOULD use the initial tool result for their first render without calling the tool again.
 
-### Icon Guidelines
+### Entrypoint Icons
 
 An icon helps users identify the MCP Server in navigation.
-
-MCP Servers SHOULD provide `icons` on each entrypoint tool in `tools/list`.
-
-#### Tool icon requirements
-
-- Icons SHOULD be SVGs.
-- Icons SHOULD be monochrome with a transparent background and use `currentColor` to match the user's theme.
-- Icons SHOULD use a 20x20px viewport with 1.33px strokes for stroke icons.
-- Icons SHOULD follow the [sidebar icon template](https://www.figma.com/design/k1TPwkpYDbcRQrU34nUnNL/Plugin-icon-template?node-id=0-1).
 
 #### Fallback
 
@@ -78,7 +70,6 @@ All entrypoints will be rendered with a title and an icon.
 
 #### Behavior Details
 
-- Servers SHOULD provide a human-readable title on each entrypoint tool.
 - The title comes from the first defined property in the following list on your MCP App’s `tools/list` entry:
   - `title`
   - `annotations["title"]`
@@ -858,9 +849,9 @@ ChatGPT currently supports `inline` and `fullscreen`, but not `pip`.
 
 ChatGPT uses the `fullscreen` display mode for all entrypoints specified above.
 
-Some model-initiated MCP Apps are more useful to the user when rendered `fullscreen` because they don't scroll off screen as the chat progresses. However, by default, all MCP Apps invoked by the model are displayed inline first.
+By default, MCP Apps invoked by the model are displayed inline first.
 
-`_meta["openai/ui"]["availableDisplayModes"]` lets MCP Servers declare which display modes their MCP App supports in resource metadata. Servers that advertise [`appCapabilities.availableDisplayModes`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#declaring-support) SHOULD also set this field so ChatGPT can render the app in a supported display mode before initialization, giving users faster visual feedback.
+`_meta["openai/ui"]["availableDisplayModes"]` lets MCP Servers declare which display modes their MCP App supports in resource metadata. This supplements [`appCapabilities.availableDisplayModes`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#declaring-support) during initialization.
 
 `_meta["openai/ui"]["preferredDisplayMode"]` is an extension that allows MCP Servers to indicate which `displayMode` the MCP App would prefer to be rendered with first.
 
@@ -1053,8 +1044,6 @@ Text block in `ui/update-model-context` with a title:
 Thumbnails give text attachments a visual representation of their context.
 
 MCP Apps MAY set `_meta["openai/thumbnail"]` to an `MCP.Icon` on `text` content blocks in `ui/update-model-context`.
-
-A square image of at least 128 × 128 pixels is recommended for thumbnails.
 
 #### Behavior Details
 
@@ -1498,7 +1487,6 @@ Thumbnails allow you to specify an image as the user-visible choice instead of j
 - Thumbnails use MCP's [Icon](https://modelcontextprotocol.io/specification/2026-07-28/schema#icon) type.
 - If ANY items for a given property have a thumbnail, ALL items for that property will be rendered with an image UI.
   - Items without a thumbnail will render a fallback image.
-  - Servers that provide images for SOME items in a given property SHOULD provide images for ALL items in that property.
 
 #### Examples
 
