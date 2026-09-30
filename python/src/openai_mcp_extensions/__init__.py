@@ -1,5 +1,7 @@
 """OpenAI-specific extensions for MCP Python servers."""
 
+from openai_mcp_form_protocol import McpAppToolTarget, PreviewTarget
+
 from openai_mcp_extensions.extensions import OpenAIExtensions
 from openai_mcp_extensions.form import OPENAI_ELICITATION_METHOD
 from openai_mcp_extensions.mentions import (
@@ -44,6 +46,8 @@ from openai_mcp_extensions.ui import (
 )
 
 __all__ = [
+    "McpAppToolTarget",
+    "PreviewTarget",
     "OPENAI_SETTINGS_CAPABILITY_KEY",
     "OpenAISettings",
     "OpenAISettingsFieldPresentation",

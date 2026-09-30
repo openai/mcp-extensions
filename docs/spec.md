@@ -13,23 +13,23 @@ This spec outlines every extension and exactly how it builds on top of the exist
 
 ## Platform Support
 
-This table describes expected support at DevDay launch. Web refers to the Work browser; classic ChatGPT is excluded. Asterisks indicate platform limitations described in the corresponding sections.
+This table describes current production support. Web refers to ChatGPT Work in the browser; classic ChatGPT is outside this table’s scope. Web support on Free is rolling out, and Go support is pending. Mobile support requires app version 1.2026.265 or newer. Asterisks indicate limitations described in the corresponding sections.
 
-| Feature                                             | Desktop   | Web           | iOS                                 | Android                             |
-| --------------------------------------------------- | --------- | ------------- | ----------------------------------- | ----------------------------------- |
-| [Global entrypoint](#global-entrypoint)             | Supported | Supported     | Supported                           | Supported                           |
-| [Thread entrypoint](#thread-entrypoint)             | Supported | Supported     | Supported                           | Supported                           |
-| [File entrypoint](#file-extension-entrypoint)       | Supported | Not supported | Not supported                       | Not supported                       |
-| [Structured settings](#structured-settings)         | Supported | Supported     | Supported                           | Supported                           |
-| [Resource display modes](#display-modes)            | Supported | Supported     | Supported                           | Supported                           |
-| [MCP App deep links](#deep-links)                   | Supported | Supported     | Supported                           | Not supported                       |
-| [Messages](#uimessage-extensions)                   | Supported | Supported     | [Supported*](#uimessage-extensions) | [Supported*](#uimessage-extensions) |
-| [Plugin onboarding](#plugin-onboarding)             | Supported | Supported     | Supported                           | Supported                           |
-| [Model context](#uiupdate-model-context-extensions) | Supported | Supported     | [Supported*](#thumbnails)           | Supported                           |
-| [File opening](#opening-local-files)                | Supported | Not supported | Not supported                       | Not supported                       |
-| [File resources](#filesystem-access)                | Supported | Not supported | Not supported                       | Not supported                       |
-| [Composer at-mentions](#composer-at-mentions)       | Supported | Not supported | Not supported                       | Not supported                       |
-| [OpenAI form elicitation](#openai-form-elicitation) | Supported | Supported     | Not supported                       | Not supported                       |
+| Feature                                             | Desktop   | Web                                              | iOS                                 | Android                             |
+| --------------------------------------------------- | --------- | ------------------------------------------------ | ----------------------------------- | ----------------------------------- |
+| [Global entrypoint](#global-entrypoint)             | Supported | Supported                                        | Supported                           | Supported                           |
+| [Thread entrypoint](#thread-entrypoint)             | Supported | Supported                                        | Supported                           | Supported                           |
+| [File entrypoint](#file-extension-entrypoint)       | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [Structured settings](#structured-settings)         | Supported | Supported                                        | Supported                           | Supported                           |
+| [Resource display modes](#display-modes)            | Supported | Supported                                        | Supported                           | Supported                           |
+| [MCP App deep links](#deep-links)                   | Supported | Supported                                        | Supported                           | Not supported                       |
+| [Messages](#uimessage-extensions)                   | Supported | Supported                                        | [Supported*](#uimessage-extensions) | [Supported*](#uimessage-extensions) |
+| [Plugin onboarding](#plugin-onboarding)             | Supported | Supported                                        | Supported                           | Supported                           |
+| [Model context](#uiupdate-model-context-extensions) | Supported | [Supported*](#uiupdate-model-context-extensions) | [Supported*](#thumbnails)           | Supported                           |
+| [File opening](#opening-local-files)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [File resources](#filesystem-access)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [Composer at-mentions](#composer-at-mentions)       | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [OpenAI form elicitation](#openai-form-elicitation) | Supported | [Supported*](#resource-selection)                   | Not supported                       | Not supported                       |
 
 ## MCP App Entrypoints
 
@@ -633,7 +633,7 @@ Settings combine primitive fields and tool actions.
   - Fields omitted from `layout` appear in an "Other settings" group after the listed groups.
 - Primitive settings only support boolean, string (with optional enum), number, and integer types.
 - Tool settings may correspond to MCP App tools or regular tools.
-  - ChatGPT settings will render a button with the layout item's `title`.
+  - Tool actions use the referenced tool's display name: `title`, then `annotations.title`, then `name`.
   - Regular tools: when the button is clicked, ChatGPT will render a spinner followed by a tooltip containing text from the tool call response.
   - MCP App tools: when the button is clicked, ChatGPT will render the MCP App in a modal on top of settings. This can be used for bespoke settings such as a payment method entry form.
 
@@ -688,7 +688,8 @@ interface SettingsGroup {
         kind: "tool";
         /** Same-server tool accepting {}. */
         tool: string;
-        title: string;
+        /** @deprecated Set the title on the referenced MCP tool. Hosts ignore this field. */
+        title?: string;
         description?: string;
       }
   )[];
@@ -754,8 +755,7 @@ Response:
             },
             {
               "kind": "tool",
-              "tool": "cad.library",
-              "title": "Browse parts…"
+              "tool": "cad.library"
             }
           ]
         }
@@ -962,6 +962,7 @@ MCP App `initialize` result:
 
 ### Behavior Details
 
+- On web, image content in model context is not yet supported.
 - Each [supported content block](#supported-content) appears as an independently removable composer attachment.
 - Content block `_meta` is excluded from model input.
 - `ui/update-model-context` is idempotent. Each call replaces the model context previously supplied by the same MCP App instance.

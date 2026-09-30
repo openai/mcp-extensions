@@ -3,6 +3,10 @@ export { createSettings } from "./settings.js";
 export { createMentions } from "./mentions.js";
 export { createElicitInput } from "./forms/elicitation.js";
 export {
+  OpenAIPreviewTargetSchema,
+  type OpenAIPreviewTarget,
+} from "../shared/preview-target.js";
+export {
   OPENAI_SETTINGS_CAPABILITY_KEY,
   OpenAISettingsCapabilitySchema,
   OpenAISettingsGroupSchema,

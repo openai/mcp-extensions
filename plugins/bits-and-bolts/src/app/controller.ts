@@ -438,12 +438,27 @@ export function startApp(
       {
         type: "text",
         text: "Bits & Bolts selected view: " + JSON.stringify(data),
+        annotations: { audience: ["assistant"] },
       },
     ];
+    if (state.part)
+      content.unshift({
+        type: "text",
+        text: `${state.part.name}: ${state.part.description}\nPart ID: ${state.part.id}\nResource: ${state.part.resourceUri}`,
+        _meta: {
+          "openai/title": state.part.name,
+          ...(state.part.previews.isometric
+            ? { "openai/thumbnail": { src: state.part.previews.isometric } }
+            : {}),
+        },
+      });
     if (withImage)
       content.push({
         type: "image",
         ...renderer.capture(),
+        _meta: {
+          "openai/title": `View of ${state.part?.name || state.file?.name || "the part"}`,
+        },
       });
     return { content, structuredContent: data };
   }

@@ -27,7 +27,8 @@ export const OpenAISettingsPropertySchema = z.strictObject({
 export const OpenAISettingsToolSchema = z.strictObject({
   kind: z.literal("tool"),
   tool: NonBlankStringSchema,
-  title: NonBlankStringSchema,
+  /** @deprecated Set the title on the referenced MCP tool. Hosts ignore this field. */
+  title: NonBlankStringSchema.optional(),
   description: z.string().optional(),
 });
 const settingsLayoutLeafSchema = z.discriminatedUnion("kind", [

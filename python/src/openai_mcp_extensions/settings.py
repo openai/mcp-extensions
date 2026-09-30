@@ -45,7 +45,11 @@ class OpenAISettingsTool(OpenAIStrictModel):
 
     kind: Literal["tool"] = "tool"
     tool: NonBlankString
-    title: NonBlankString
+    title: NonBlankString | None = Field(
+        default=None,
+        deprecated="Set the title on the referenced MCP tool. Hosts ignore this field.",
+        exclude_if=lambda value: value is None,
+    )
     description: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 

@@ -1,9 +1,7 @@
 import type { App } from "@modelcontextprotocol/ext-apps";
+import { McpUiMessageRequestSchema } from "@modelcontextprotocol/ext-apps/app-bridge";
 import type { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
-import {
-  ContentBlockSchema,
-  RequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { RequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 export const OPENAI_MESSAGE_KEY = "openai/message";
@@ -20,11 +18,8 @@ export const OpenAIMessageOptionsSchema = z
 
 export type OpenAIMessageOptions = z.infer<typeof OpenAIMessageOptionsSchema>;
 
-export const OpenAIMessageParamsSchema = RequestSchema.shape.params
-  .unwrap()
-  .extend({
-    role: z.literal("user"),
-    content: z.array(ContentBlockSchema),
+export const OpenAIMessageParamsSchema =
+  McpUiMessageRequestSchema.shape.params.extend({
     _meta: RequestSchema.shape.params
       .unwrap()
       .shape._meta.unwrap()

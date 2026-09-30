@@ -138,7 +138,6 @@ export function registerCadServer({
           {
             kind: "tool",
             tool: "cad.settings",
-            title: "Viewer controls",
             description: "Open the custom viewer settings",
           },
         ],
@@ -179,7 +178,7 @@ export function registerCadServer({
   server.registerTool(
     "cad.tray",
     {
-      title: "Bits & Bolts",
+      title: "Parts Tray",
       description: "Open the parts library beside this conversation.",
       inputSchema: z.object({}),
       annotations: readonly,
@@ -200,7 +199,7 @@ export function registerCadServer({
   server.registerTool(
     "cad.settings",
     {
-      title: "Viewer settings",
+      title: "Viewer controls",
       inputSchema: z.object({}),
       annotations: readonly,
       _meta: ui([{ type: "settings" }]),
@@ -427,6 +426,20 @@ export function registerCadServer({
             uri: p.resourceUri,
             name: p.fileName,
             title: p.name,
+            description: p.description,
+            _meta: {
+              ...(p.previews.isometric
+                ? { "openai/thumbnail": { src: p.previews.isometric } }
+                : {}),
+              "openai/preview": {
+                target: {
+                  type: "resource_link",
+                  uri: p.resourceUri,
+                  name: p.fileName,
+                  mimeType: "text/markdown",
+                },
+              },
+            },
           })),
           userOptions:
             kind === "file"
@@ -479,6 +492,29 @@ export function registerCadServer({
               type: "string",
               title: "Priority",
               enum: ["low", "normal", "high"],
+            },
+            purpose: {
+              type: "string",
+              title: "Purpose",
+              minLength: 1,
+              "x-openai-suggestions": [
+                { const: "prototype", title: "Prototype" },
+              ],
+            },
+            checks: {
+              type: "array",
+              title: "Checks",
+              items: {
+                type: "string",
+                minLength: 1,
+                "x-openai-suggestions": [
+                  {
+                    const: "clearance",
+                    title: "Clearance",
+                    description: "Check spacing between assembled parts.",
+                  },
+                ],
+              },
             },
             approved: { type: "boolean", title: "Approved" },
             tolerance: {
