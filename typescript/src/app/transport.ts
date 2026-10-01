@@ -63,8 +63,13 @@ export function createAppTransport<
         });
       }
     } else if (message.method) {
-      for (const listener of listeners.get(message.method) ?? [])
-        listener((message.params ?? {}) as Payload);
+      for (const listener of listeners.get(message.method) ?? []) {
+        try {
+          listener((message.params ?? {}) as Payload);
+        } catch (error) {
+          console.error(`MCP listener error for ${message.method}:`, error);
+        }
+      }
     }
   };
   window.addEventListener("message", receive);
