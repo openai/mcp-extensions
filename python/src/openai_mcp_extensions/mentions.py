@@ -6,6 +6,7 @@ import inspect
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Annotated, Any, Literal
 
+import anyio.to_thread
 from mcp.server.extension import ToolBinding
 from mcp.server.mcpserver.context import Context
 from mcp_types import CallToolResult, Icon, ResourceLink, ToolAnnotations
@@ -55,7 +56,7 @@ class OpenAIMentions:
         self._handler: OpenAIMentionSearchHandler | None = None
 
     def search(self, handler: OpenAIMentionSearchHandler) -> OpenAIMentionSearchHandler:
-        """Register or replace the mention-search handler."""
+        """Register or replace a handler; synchronous handlers run in a worker thread."""
 
         self._handler = handler
         return handler
@@ -75,7 +76,12 @@ class OpenAIMentions:
             if handler is None:
                 result = OpenAIMentionSearchResult(items=[])
             else:
-                handled = handler(params, ctx)
+                if inspect.iscoroutinefunction(handler) or inspect.iscoroutinefunction(
+                    handler.__call__
+                ):
+                    handled = handler(params, ctx)
+                else:
+                    handled = await anyio.to_thread.run_sync(handler, params, ctx)
                 result = await handled if inspect.isawaitable(handled) else handled
 
             return CallToolResult(
