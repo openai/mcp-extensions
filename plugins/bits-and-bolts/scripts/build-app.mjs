@@ -1,4 +1,4 @@
-/* global URL, console, process, Buffer, fetch, setTimeout, clearTimeout */
+/* global URL */
 
 import { readFile } from "node:fs/promises";
 import { build } from "vite";

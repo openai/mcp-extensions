@@ -1,15 +1,15 @@
 import {
-  BufferGeometry,
+  type BufferGeometry,
   Color,
   DoubleSide,
   Group,
   ImageBitmapLoader,
   Line,
-  Material,
+  type Material,
   Mesh,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
-  Object3D,
+  type Object3D,
   Points,
   Texture,
 } from "three";

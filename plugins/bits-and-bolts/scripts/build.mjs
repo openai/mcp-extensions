@@ -1,4 +1,4 @@
-/* global URL, console, process, Buffer, fetch, setTimeout, clearTimeout */
+/* global process */
 
 import {
   access,

@@ -1,4 +1,6 @@
 import { createServer } from "node:http";
+import { error, log } from "node:console";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { readFile } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
@@ -262,10 +264,13 @@ createServer(async (req, res) => {
       ...Object.fromEntries(response.headers),
     });
     if (response.body)
-      await pipeline(Readable.fromWeb(response.body as any), res);
+      await pipeline(
+        Readable.fromWeb(response.body as NodeReadableStream<Uint8Array>),
+        res,
+      );
     else res.end();
-  } catch (error) {
-    console.error("Remote request failed", { error });
+  } catch (cause) {
+    error("Remote request failed", { error: cause });
     if (res.headersSent) res.destroy();
     else {
       res.writeHead(500, cors);
@@ -273,7 +278,7 @@ createServer(async (req, res) => {
     }
   }
 }).listen(port, process.env.HOST ?? "0.0.0.0", () => {
-  console.log("Remote server started", {
+  log("Remote server started", {
     port,
     origin: publicOrigin,
     persistence: "memory",

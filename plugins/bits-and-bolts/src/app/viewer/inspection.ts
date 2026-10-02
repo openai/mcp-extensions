@@ -1,8 +1,8 @@
 import {
   Box3,
   MathUtils,
-  Mesh,
-  PerspectiveCamera,
+  type Mesh,
+  type PerspectiveCamera,
   Sphere,
   Vector3,
 } from "three";

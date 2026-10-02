@@ -2,11 +2,16 @@ import { createRenderer } from "./renderers/three.js";
 import { createLibrary, filterParts } from "./library.js";
 import { App } from "@modelcontextprotocol/ext-apps";
 import { z } from "zod/v4";
-import { OpenAIExtensions } from "@openai/mcp-extensions/app";
+import {
+  OpenAIExtensions,
+  type OpenAIModelContextHostState,
+  type OpenAIDeepLinkHostState,
+} from "@openai/mcp-extensions/app";
 import {
   partSourceResultSchema,
   publicCadPartSchema,
   type PublicCadPart,
+  type CadPreferences,
 } from "../shared/contracts.js";
 import type { RenderState, ModelSource } from "./renderers/types.js";
 import type { ContentBlock } from "@modelcontextprotocol/sdk/types.js";
@@ -19,8 +24,8 @@ type AppState = RenderState & {
   dirty: boolean;
   page: "library" | "viewer";
   defaultView: string;
-  capabilities: Record<string, any>;
-  host: Record<string, any>;
+  capabilities: NonNullable<ReturnType<App["getHostCapabilities"]>>;
+  host: NonNullable<ReturnType<App["getHostContext"]>>;
   connected: boolean;
   subscription: string | null;
 };
@@ -45,7 +50,21 @@ export function startApp() {
   let importPending = false;
   let localFilesystem = false;
   let uploadUrl: string | undefined;
-  const $ = (id: string): any => document.getElementById(id);
+  type ElementFor<Id extends string> = Id extends "camera" | "mode"
+    ? HTMLSelectElement
+    : Id extends "search" | "import"
+      ? HTMLInputElement
+      : Id extends "view-preview"
+        ? HTMLImageElement
+        : Id extends "part-tools"
+          ? HTMLDetailsElement
+          : Id extends "unsaved-dialog"
+            ? HTMLDialogElement
+            : Id extends "add-library" | "save" | "share"
+              ? HTMLButtonElement
+              : HTMLElement;
+  const $ = <Id extends string>(id: Id) =>
+    document.getElementById(id) as ElementFor<Id>;
   const state: AppState = {
     part: null,
     file: null,
@@ -170,8 +189,8 @@ export function startApp() {
     $("status").scrollIntoView({ block: "nearest" });
   }
   const act =
-    (fn: (...args: any[]) => any) =>
-    (...args: any[]) =>
+    <Args extends unknown[]>(fn: (...args: Args) => unknown) =>
+    (...args: Args) =>
       Promise.resolve()
         .then(() => fn(...args))
         .catch(fail);
@@ -200,7 +219,7 @@ export function startApp() {
     $("model-file").textContent =
       state.part?.fileName || state.file?.name || "—";
     $("part-description").textContent = state.part?.description || "";
-    $("part-description").parentElement.hidden = !state.part?.description;
+    $("part-description").parentElement!.hidden = !state.part?.description;
     $("dirty-indicator").hidden = !state.dirty;
     $("dimension-note").hidden = !renderer.bounds().assumedMillimeters;
     $("selection").textContent = state.selection ? "Point selected" : "";
@@ -411,7 +430,7 @@ export function startApp() {
       return;
     }
     const content =
-      response.contents?.find((c: any) => c.uri === file.resourceUri) ||
+      response.contents?.find((c) => c.uri === file.resourceUri) ||
       response.contents?.[0];
     if (!content) throw new Error("Host returned no file contents.");
     const bytes =
@@ -682,10 +701,10 @@ export function startApp() {
       }
     }
   }
-  function applyHost(update: Record<string, any>) {
+  function applyHost(update: NonNullable<ReturnType<App["getHostContext"]>>) {
     Object.assign(state.host, update);
     if (Object.hasOwn(update, "safeAreaInsets")) {
-      for (const edge of ["top", "right", "bottom", "left"]) {
+      for (const edge of ["top", "right", "bottom", "left"] as const) {
         const value = update.safeAreaInsets?.[edge];
         if (value == null)
           document.documentElement.style.removeProperty(`--safe-area-${edge}`);
@@ -703,7 +722,7 @@ export function startApp() {
       window.dispatchEvent(new Event("cad-theme-change"));
     }
     if (typeof update.styles?.css?.fonts === "string") {
-      let fonts = $("host-fonts");
+      let fonts = document.getElementById("host-fonts");
       if (!fonts) {
         fonts = document.createElement("style");
         fonts.id = "host-fonts";
@@ -723,35 +742,36 @@ export function startApp() {
       renderer.clearSelection();
     }
     if (Object.hasOwn(update, "openai/modelContext")) {
+      const modelContext = update["openai/modelContext"] as
+        OpenAIModelContextHostState | undefined;
       if (attachedView) {
         const id = attachedView._meta?.["bits-and-bolts/viewId"];
-        attachedView = update["openai/modelContext"]?.content?.find(
+        attachedView = modelContext?.content?.find(
           (block: ContentBlock) =>
             block._meta?.["bits-and-bolts/viewId"] === id,
         );
       }
-      exampleContext = (update["openai/modelContext"]?.content ?? []).filter(
+      exampleContext = (modelContext?.content ?? []).filter(
         (block: ContentBlock) =>
           block._meta?.["bits-and-bolts/contextExample"] === true,
       );
-      selectedParts = (update["openai/modelContext"]?.content ?? []).filter(
+      selectedParts = (modelContext?.content ?? []).filter(
         (block: ContentBlock) =>
           typeof block._meta?.["bits-and-bolts/partId"] === "string",
       );
       updateSelection();
     }
-    if (update["openai/deepLink"]?.url) {
+    const deepLink = update["openai/deepLink"] as
+      OpenAIDeepLinkHostState | undefined;
+    if (deepLink?.url) {
       pendingDeepLink = null;
-      const url = new URL(
-        update["openai/deepLink"].url,
-        "https://bits-and-bolts.invalid",
-      );
+      const url = new URL(deepLink.url, "https://bits-and-bolts.invalid");
       const id = decodeURIComponent(url.pathname.replace(/^\/parts\//, "")),
         part = catalog.find((p) => p.id === id);
       if (!catalogLoaded && url.pathname.startsWith("/parts/")) {
         ensureCanLeave();
         generation++;
-        pendingDeepLink = update["openai/deepLink"];
+        pendingDeepLink = deepLink;
       } else if (part) void openPart(part).catch(fail);
       else if (url.pathname === "/") {
         showLibrary();
@@ -762,15 +782,30 @@ export function startApp() {
     updateLibraryNavigation();
     draw();
   }
-  async function toolResult(payload: any, initial = false) {
+  async function toolResult(
+    payload: Awaited<ReturnType<App["callServerTool"]>>,
+    initial = false,
+  ) {
     if (payload?.isError)
       throw new Error(
         payload.content
-          ?.filter((c: any) => c.type === "text")
-          .map((c: any) => c.text)
+          ?.filter((c) => c.type === "text")
+          .map((c) => c.text)
           .join("\n") || "Tool failed.",
       );
-    const data = payload?.structuredContent;
+    const data = payload?.structuredContent as
+      | Partial<{
+          parts: PublicCadPart[];
+          localFilesystem: boolean;
+          uploadUrl: string;
+          file: FileInfo;
+          part: PublicCadPart;
+          page: AppState["page"];
+          preferences: CadPreferences;
+          camera: string;
+          mode: string;
+        }>
+      | undefined;
     if (!data) return;
     if (data.parts && (!initial || !catalogLoaded)) {
       catalogRevision++;
@@ -798,7 +833,7 @@ export function startApp() {
     // A startup link owns initial routing, but newer user navigation wins.
     if (!initial || (generation === 0 && !pendingDeepLink)) {
       if (data.file || data.part) {
-        const opening = data.file ? openFile(data.file) : openPart(data.part);
+        const opening = data.file ? openFile(data.file) : openPart(data.part!);
         const token = generation;
         await opening;
         if (token !== generation) return;
@@ -1004,11 +1039,11 @@ export function startApp() {
     const menu = $("part-tools");
     if (!menu.open) return;
     menu.open = false;
-    menu.querySelector("summary").focus();
+    menu.querySelector("summary")!.focus();
   });
-  $("camera").onchange = (e: any) => camera(e.target.value);
-  $("mode").onchange = (e: any) => {
-    state.mode = e.target.value;
+  $("camera").onchange = () => camera($("camera").value);
+  $("mode").onchange = () => {
+    state.mode = $("mode").value;
     renderer.configure({ mode: state.mode });
     draw();
     queueContext();
@@ -1125,9 +1160,10 @@ export function startApp() {
     );
     status(response.isError ? "Download canceled." : "STL saved.");
   });
-  $("import").onchange = act(async (event: any) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+  $("import").onchange = act(async (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
     if (!file) return;
     const format = file.name.split(".").pop()?.toLowerCase() || "";
     if (!renderer.formats.includes(format))

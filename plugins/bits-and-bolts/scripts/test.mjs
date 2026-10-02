@@ -1,5 +1,3 @@
-/* global URL, console, process, Buffer, fetch, setTimeout, clearTimeout */
-
 import { mkdir } from "node:fs/promises";
 
 import { build } from "esbuild";

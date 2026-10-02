@@ -1,4 +1,4 @@
-import { Box3, Group, Mesh, Vector3, WebGLRenderer } from "three";
+import { Box3, type Group, Mesh, Vector3, WebGLRenderer } from "three";
 import { STLExporter } from "three/addons/exporters/STLExporter.js";
 import { createStudioEnvironment } from "../shared/lighting.js";
 import { disposeObjectResources } from "../shared/model.js";

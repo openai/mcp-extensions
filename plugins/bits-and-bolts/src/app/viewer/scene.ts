@@ -3,7 +3,7 @@ import {
   BufferGeometry,
   Color,
   EdgesGeometry,
-  Material,
+  type Material,
   Float32BufferAttribute,
   Group,
   LineBasicMaterial,

@@ -1,13 +1,13 @@
 import {
   AgXToneMapping,
-  Box3,
+  type Box3,
   DirectionalLight,
   PCFShadowMap,
   PMREMGenerator,
-  Scene,
+  type Scene,
   Sphere,
   SRGBColorSpace,
-  WebGLRenderer,
+  type WebGLRenderer,
 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 

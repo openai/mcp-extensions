@@ -1,4 +1,9 @@
 import { readFile } from "node:fs/promises";
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type {
+  ServerRequest,
+  ServerNotification,
+} from "@modelcontextprotocol/sdk/types.js";
 import {
   McpServer,
   ResourceTemplate,
@@ -52,7 +57,7 @@ server.registerTool(
   },
   async (input) => cadResult({ part: await store.import(input) }),
 );
-registerCadServer({
+registerCadServer<RequestHandlerExtra<ServerRequest, ServerNotification>>({
   server: server as unknown as CadServerOptions["server"],
   resourceTemplate:
     ResourceTemplate as unknown as CadServerOptions["resourceTemplate"],

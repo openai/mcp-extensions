@@ -1,4 +1,4 @@
-/* global URL, console, process, Buffer, setTimeout, clearTimeout */
+/* global URL */
 
 import { copyFile, readFile, writeFile } from "node:fs/promises";
 

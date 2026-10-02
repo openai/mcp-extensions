@@ -1,4 +1,4 @@
-/* global URL, console, process, Buffer, setTimeout, clearTimeout */
+/* global URL, process */
 
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";

@@ -88,7 +88,7 @@ export async function handleDemoOAuth(
       return new Response(
         `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Connect Bits &amp; Bolts</title>
         <style>body{font:16px system-ui;color:#222;background:#fafafa;margin:0;display:grid;min-height:100vh;place-items:center}main{max-width:420px;padding:32px}h1{font-size:26px}p{line-height:1.5;color:#666}form{display:grid;gap:12px;margin-top:24px}button{font:inherit;text-align:left;padding:18px;border:1px solid #ddd;border-radius:12px;background:white;cursor:pointer}button:hover{background:#eee}small{display:block;margin-top:6px;color:#666}</style>
-        <main><h1>Connect Bits &amp; Bolts</h1><p>These are demo accounts to test OAuth. Your Bits &amp; Bolts settings are tied to your connection and the account you choose.</p>
+        <main><h1>Connect Bits &amp; Bolts</h1><p>These are shared demo libraries. Imported files are visible to everyone who chooses the same account. Use sample files only. Your settings are saved separately for your connection.</p>
         <form method="post"><button name="account" value="personal">Personal<small>Starts in millimeters, grid on</small></button><button name="account" value="work">Work<small>Starts in inches, grid off</small></button></form></main></html>`,
         { headers: { "Content-Type": "text/html; charset=utf-8" } },
       );

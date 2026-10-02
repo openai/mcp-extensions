@@ -12,7 +12,7 @@ import {
   type CadPart,
 } from "./catalog.js";
 import type { CatalogStore } from "./store.js";
-const publicPart = ({ storagePath, ...part }: CadPart) => part;
+const publicPart = ({ storagePath: _storagePath, ...part }: CadPart) => part;
 export async function createLocalStore(): Promise<CatalogStore> {
   await initializeCatalog();
   return {

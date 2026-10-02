@@ -96,10 +96,6 @@ Global entrypoints expose apps that users can open fullscreen from global naviga
 ```ts
 interface GlobalEntrypoint {
   type: "global";
-  header?: {
-    // Defaults to true when header is provided.
-    enabled?: boolean;
-  };
 }
 ```
 
@@ -131,8 +127,6 @@ interface GlobalEntrypoint {
 #### Global header
 
 ChatGPT reserves a header for apps opened from global entrypoints in desktop and web, providing consistent UI with native features and OpenAI MCP capabilities, like account selection, out of the box.
-
-MCP Apps MAY opt out by setting `header: { enabled: false }`. Without the header, ChatGPT always opens the app using the first account.
 
 MCP Apps MAY declare `theme-color` meta tags in the resource HTML to customize the background. ChatGPT reads these declarations when the app mounts. If omitted, the host's default background is used.
 
@@ -1327,6 +1321,9 @@ Normally, users can only at-mention a plugin or MCP Server. The at-mention capab
 - The at-mention tool is responsible for handling the at-mention request, which includes a typeahead search query, and returning items for the user to choose from.
 - Returned items may be resource links.
 - Servers advertise `openai/mentions: { searchTool: string }` through [server capabilities](#server-capabilities). `searchTool` is the non-blank name of a read-only tool on that server.
+- At-mention tools MUST include `"app"` in `_meta["ui"]["visibility"]`.
+
+> **Deprecated:** `_meta["openai/extensions"]["mentions/search"]: {}` remains supported when the `openai/mentions` capability is absent. Advertise the capability instead.
 
 ### Examples
 

@@ -2,6 +2,7 @@ import type {
   ResourceTemplate,
   McpServer,
   InputRequiredResult,
+  ServerContext,
 } from "@modelcontextprotocol/server";
 import type { Icon } from "@modelcontextprotocol/sdk/types.js";
 import {
@@ -27,7 +28,7 @@ declare const __LOCAL_FILESYSTEM__: boolean;
 
 // The two SDKs share registration APIs; their entrypoints supply resource templates
 // and form handling from the matching SDK.
-export type CadServerOptions = {
+export type CadServerOptions<Context = ServerContext> = {
   server: Pick<McpServer, "registerTool" | "registerResource" | "server">;
   resourceTemplate: typeof ResourceTemplate;
   partUriTemplate: string;
@@ -37,13 +38,13 @@ export type CadServerOptions = {
   icons: Icon[];
   formats: string[];
   elicit: (
-    context: any,
+    context: Context,
     params: OpenAIFormRequestParams,
   ) =>
     | OpenAIFormResult
     | InputRequiredResult
     | Promise<OpenAIFormResult | InputRequiredResult>;
-  requestMeta: (context: any) => Record<string, unknown> | undefined;
+  requestMeta: (context: Context) => Record<string, unknown> | undefined;
   wasm: { blob: string } | { text: string };
   assetOrigin?: string;
 };
@@ -69,7 +70,7 @@ const readonly = {
   destructiveHint: false,
   openWorldHint: false,
 };
-export function registerCadServer({
+export function registerCadServer<Context = ServerContext>({
   server,
   resourceTemplate: ResourceTemplate,
   partUriTemplate,
@@ -82,7 +83,7 @@ export function registerCadServer({
   requestMeta,
   wasm,
   assetOrigin,
-}: CadServerOptions) {
+}: CadServerOptions<Context>) {
   const entrypoint = { icons, annotations: readonly };
   const UI = "ui://bits-and-bolts/global-v35";
   const THREAD = "ui://bits-and-bolts/thread-v35";
@@ -371,7 +372,9 @@ export function registerCadServer({
         _meta: { ui: { visibility: ["app"] } },
       },
       async ({ fileName }, context) => {
-        const path = getResourcePath(requestMeta(context));
+        const path = getResourcePath(
+          requestMeta(context as unknown as Context),
+        );
         if (!path)
           throw Error("The host did not provide a trusted CAD source path.");
         const part = await store.importPath!(path, fileName);
@@ -379,11 +382,11 @@ export function registerCadServer({
       },
     );
   const elicit = (
-    context: any,
+    context: ServerContext,
     message: string,
     requestedSchema: OpenAIFormRequestParams["requestedSchema"],
   ) =>
-    requestForm(context, {
+    requestForm(context as unknown as Context, {
       mode: "form",
       message,
       requestedSchema,

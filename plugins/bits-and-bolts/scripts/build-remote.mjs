@@ -1,4 +1,4 @@
-/* global URL, console, process, Buffer, setTimeout, clearTimeout */
+/* global URL, console, process */
 
 import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
