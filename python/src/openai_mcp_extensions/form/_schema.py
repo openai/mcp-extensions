@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from openai_mcp_form_protocol import FormField, FormSchema
 from pydantic import BaseModel
 from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 from pydantic_core import core_schema
+
+from openai_mcp_form_protocol import FormField, FormSchema
 
 
 class _FormJsonSchema(GenerateJsonSchema):
