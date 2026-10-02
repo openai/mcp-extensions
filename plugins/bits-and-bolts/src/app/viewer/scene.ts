@@ -1,9 +1,9 @@
-import type { Material } from "three";
 import {
   Box3,
   BufferGeometry,
   Color,
   EdgesGeometry,
+  Material,
   Float32BufferAttribute,
   Group,
   LineBasicMaterial,
@@ -17,7 +17,8 @@ import {
   SphereGeometry,
   Vector2,
   Vector3,
-  WebGLRenderer,
+  type WebGLRenderer,
+  type WebGLRenderTarget,
   WireframeGeometry,
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -42,6 +43,9 @@ export type CadSelection = {
   point: [number, number, number];
 };
 export type SceneApi = {
+  ready: Promise<void>;
+  start: () => void;
+  stop: () => void;
   captureSelection: () => string;
   captureViews: () => PreviewImages;
   clearSelection: () => void;
@@ -53,6 +57,7 @@ export type SceneApi = {
   setUnits: (units: "mm" | "in") => void;
   setZoom: (zoom: number) => void;
   setOrbit: (yaw: number, pitch: number) => void;
+  getCameraState: () => ViewerState["camera"];
   getViewerState: () => ViewerState;
   captureView: () => ViewCapture;
   subscribe: (listener: () => void) => () => void;
@@ -63,6 +68,8 @@ Object3D.DEFAULT_UP.copy(CAD_UP);
 
 export function mountScene(
   container: HTMLElement,
+  renderer: WebGLRenderer,
+  environment: WebGLRenderTarget,
   model: Group,
   preferences: CadPreferences,
   onSelect: ((selection: CadSelection | null) => void) | null,
@@ -72,16 +79,8 @@ export function mountScene(
   camera.up.copy(CAD_UP);
   camera.position.set(1, -1, 1);
 
-  const renderer = new WebGLRenderer({
-    antialias: true,
-    alpha: false,
-    preserveDrawingBuffer: true,
-  });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(container.clientWidth, container.clientHeight);
-  container.append(renderer.domElement);
-
-  const controls = new OrbitControls(camera, renderer.domElement);
+  const controls = new OrbitControls(camera);
+  let active = false;
   let preset: ViewPreset | "custom" = preferences.defaultView;
   let display: DisplayMode = "solid";
   let units = preferences.units;
@@ -114,6 +113,7 @@ export function mountScene(
     renderer,
     box.translate(modelRoot.position),
     2048,
+    environment,
   );
 
   const grid = createCadGrid(radius);
@@ -121,7 +121,12 @@ export function mountScene(
   scene.add(grid);
 
   const wireframes: Array<LineSegments> = [];
-  const wireframeMaterials: Array<LineBasicMaterial> = [];
+  const overlayMaterial = new LineBasicMaterial({
+    depthWrite: false,
+    opacity: 0.88,
+    toneMapped: false,
+    transparent: true,
+  });
   const outlines: LineSegments[] = [];
   const originalMaterials = new Map<
     Material,
@@ -133,7 +138,6 @@ export function mountScene(
     }
   >();
   const selectableMeshes: Array<Mesh> = [];
-  const wireframeColor = new Color();
   modelRoot.traverse((object) => {
     if (!(object instanceof Mesh)) {
       return;
@@ -150,45 +154,41 @@ export function mountScene(
         visible: material.visible,
       });
     }
-    const material = new LineBasicMaterial({
-      color: wireframeColor,
-      depthWrite: false,
-      opacity: 0.88,
-      toneMapped: false,
-      transparent: true,
-    });
-    const edges = new LineSegments(
-      new WireframeGeometry(object.geometry),
-      material,
-    );
-    edges.visible = false;
-    object.add(edges);
-    wireframes.push(edges);
-    wireframeMaterials.push(material);
-    const outline = new LineSegments(
-      new EdgesGeometry(object.geometry, 25),
-      material,
-    );
-    outline.visible = false;
-    object.add(outline);
-    outlines.push(outline);
   });
+  function prepareOverlays(mode: "wireframe" | "edges") {
+    const overlays = mode === "wireframe" ? wireframes : outlines;
+    if (overlays.length) return;
+    const geometry = new Map<BufferGeometry, BufferGeometry>();
+    for (const object of selectableMeshes) {
+      let prepared = geometry.get(object.geometry);
+      if (!prepared) {
+        prepared =
+          mode === "wireframe"
+            ? new WireframeGeometry(object.geometry)
+            : new EdgesGeometry(object.geometry, 25);
+        geometry.set(object.geometry, prepared);
+      }
+      const edges = new LineSegments(prepared, overlayMaterial);
+      edges.visible = false;
+      object.add(edges);
+      overlays.push(edges);
+    }
+  }
 
   function syncTheme() {
-    const backgroundColor = new Color(getThemeBackgroundColor());
+    const backgroundColor = new Color(getThemeBackgroundColor(container));
     scene.background = backgroundColor;
     const luminance =
       0.2126 * backgroundColor.r +
       0.7152 * backgroundColor.g +
       0.0722 * backgroundColor.b;
-    wireframeColor.set(luminance > 0.5 ? "#172033" : "#edf4ff");
-    for (const material of wireframeMaterials) {
-      material.color.copy(wireframeColor);
-    }
+    overlayMaterial.color.set(luminance > 0.5 ? "#172033" : "#edf4ff");
   }
   syncTheme();
-  window.addEventListener("cad-theme-change", syncTheme);
 
+  // Interaction markers use world units and never belong to exported geometry.
+  const annotations = new Group();
+  scene.add(annotations);
   const raycaster = new Raycaster();
   let pointerStart: { x: number; y: number } | null = null;
   let selectionMarker: Mesh<SphereGeometry, MeshBasicMaterial> | null = null;
@@ -205,6 +205,7 @@ export function mountScene(
   hoverMarker.renderOrder = 1;
 
   function clearSelection() {
+    clearHover();
     if (selectionMarker == null) {
       return;
     }
@@ -245,10 +246,8 @@ export function mountScene(
       clearHover();
       return;
     }
-    hoverMarker.position.copy(
-      intersection.object.worldToLocal(intersection.point.clone()),
-    );
-    intersection.object.add(hoverMarker);
+    hoverMarker.position.copy(intersection.point);
+    annotations.add(hoverMarker);
     renderer.domElement.style.cursor = "pointer";
   }
 
@@ -279,11 +278,9 @@ export function mountScene(
         toneMapped: false,
       }),
     );
-    selectionMarker.position.copy(
-      intersection.object.worldToLocal(intersection.point.clone()),
-    );
+    selectionMarker.position.copy(intersection.point);
     selectionMarker.renderOrder = 2;
-    intersection.object.add(selectionMarker);
+    annotations.add(selectionMarker);
 
     const point = model.worldToLocal(intersection.point.clone());
     const normal = intersection.face?.normal
@@ -298,11 +295,32 @@ export function mountScene(
     });
   }
 
-  if (onSelect != null) {
-    renderer.domElement.addEventListener("pointerdown", handlePointerDown);
-    renderer.domElement.addEventListener("pointerleave", clearHover);
-    renderer.domElement.addEventListener("pointermove", handlePointerMove);
-    renderer.domElement.addEventListener("pointerup", handlePointerUp);
+  function activate() {
+    if (active) return;
+    active = true;
+    controls.connect(renderer.domElement);
+    window.addEventListener("cad-theme-change", syncTheme);
+    syncTheme();
+    observer.observe(container);
+    resize();
+    if (onSelect != null) {
+      renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+      renderer.domElement.addEventListener("pointerleave", clearHover);
+      renderer.domElement.addEventListener("pointermove", handlePointerMove);
+      renderer.domElement.addEventListener("pointerup", handlePointerUp);
+    }
+  }
+  function deactivate() {
+    if (!active) return;
+    active = false;
+    controls.disconnect();
+    window.removeEventListener("cad-theme-change", syncTheme);
+    observer.disconnect();
+    renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+    renderer.domElement.removeEventListener("pointerleave", clearHover);
+    renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+    renderer.domElement.removeEventListener("pointerup", handlePointerUp);
+    clearHover();
   }
 
   function updateProjection() {
@@ -315,17 +333,21 @@ export function mountScene(
     camera.updateProjectionMatrix();
   }
 
+  function getCameraState(): ViewerState["camera"] {
+    return {
+      preset,
+      zoom: camera.zoom,
+      position: camera.position.toArray(),
+      target: controls.target.toArray(),
+      up: camera.up.toArray(),
+    };
+  }
+
   function getViewerState(): ViewerState {
     const size = getMeshBounds(selectableMeshes).getSize(new Vector3());
     if (units === "in") size.divideScalar(25.4);
     return {
-      camera: {
-        preset,
-        zoom: camera.zoom,
-        position: camera.position.toArray(),
-        target: controls.target.toArray(),
-        up: camera.up.toArray(),
-      },
+      camera: getCameraState(),
       display,
       grid: grid.visible,
       dimensions: {
@@ -362,6 +384,9 @@ export function mountScene(
   }
 
   function setDisplay(next: DisplayMode) {
+    if (next === "wireframe") prepareOverlays("wireframe");
+    else if (next === "edges" || next === "transparent")
+      prepareOverlays("edges");
     display = next;
     for (const [material, original] of originalMaterials) {
       material.visible = next === "wireframe" ? false : original.visible;
@@ -392,43 +417,52 @@ export function mountScene(
   }
 
   const observer = new ResizeObserver(resize);
-  observer.observe(container);
-  resize();
+  updateProjection();
   setView(preferences.defaultView);
 
   let frame = 0;
   function animate() {
     frame = requestAnimationFrame(animate);
-    controls.update();
+    if (container.clientWidth === 0 || container.clientHeight === 0) return;
+    const cameraChanged = controls.update();
     renderer.render(scene, camera);
+    if (cameraChanged) notify();
   }
-  animate();
+  // Keep the previous scene alive until this finishes so shared shader programs survive.
+  const ready = renderer.compileAsync(scene, camera).then(() => {});
 
   return {
+    ready,
+    start() {
+      activate();
+      if (!frame) frame = requestAnimationFrame(animate);
+    },
+    stop() {
+      deactivate();
+      cancelAnimationFrame(frame);
+      frame = 0;
+    },
     captureSelection() {
       renderer.render(scene, camera);
       return renderer.domElement.toDataURL("image/jpeg", 0.82);
     },
     captureViews() {
+      const originalBackground = scene.background;
+      const originalOverlayColor = overlayMaterial.color.clone();
       const originalCamera = camera.clone();
       const originalTarget = controls.target.clone();
       const originalPreset = preset;
       const originalDisplay = display;
-      const images: PreviewImages = {};
       try {
-        for (const name of [
-          "isometric",
-          "front",
-          "top",
-          "wireframe",
-        ] as const) {
-          setView(name === "wireframe" ? "isometric" : name);
-          setDisplay(name === "wireframe" ? "wireframe" : "solid");
-          renderer.render(scene, camera);
-          images[name] = renderer.domElement.toDataURL("image/jpeg", 0.84);
-        }
-        return images;
+        scene.background = new Color(0xffffff);
+        overlayMaterial.color.set("#172033");
+        setView("isometric");
+        setDisplay("solid");
+        renderer.render(scene, camera);
+        return { isometric: renderer.domElement.toDataURL("image/jpeg", 0.84) };
       } finally {
+        scene.background = originalBackground;
+        overlayMaterial.color.copy(originalOverlayColor);
         camera.copy(originalCamera);
         controls.target.copy(originalTarget);
         preset = originalPreset;
@@ -440,6 +474,7 @@ export function mountScene(
     },
     setView,
     setDisplay,
+    getCameraState,
     getViewerState,
     setGrid(visible) {
       grid.visible = visible;
@@ -494,25 +529,17 @@ export function mountScene(
     },
     clearSelection,
     dispose() {
+      deactivate();
       cancelAnimationFrame(frame);
-      observer.disconnect();
-      window.removeEventListener("cad-theme-change", syncTheme);
-      renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
-      renderer.domElement.removeEventListener("pointerleave", clearHover);
-      renderer.domElement.removeEventListener("pointermove", handlePointerMove);
-      renderer.domElement.removeEventListener("pointerup", handlePointerUp);
-      clearHover();
+      hoverMarker.removeFromParent();
       hoverMarker.geometry.dispose();
       hoverMarker.material.dispose();
       clearSelection();
       controls.removeEventListener("end", handleOrbit);
       listeners.clear();
-      controls.dispose();
+      // deactivate() has already disconnected all controls; inactive candidates never connect.
       lighting.dispose();
       disposeObjectResources(scene);
-      renderer.dispose();
-      renderer.forceContextLoss();
-      renderer.domElement.remove();
     },
     fit,
   };
@@ -563,8 +590,8 @@ function createLineSegments(
   );
 }
 
-function getThemeBackgroundColor(): string {
-  const computedColor = getComputedStyle(document.body).backgroundColor;
+function getThemeBackgroundColor(container: HTMLElement): string {
+  const computedColor = getComputedStyle(container).backgroundColor;
   return computedColor === "" || computedColor === "rgba(0, 0, 0, 0)"
     ? "#171717"
     : computedColor;

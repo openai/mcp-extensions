@@ -13,8 +13,8 @@ export const OpenAIMessageOptionsSchema = z
   .object({
     /** Which conversation receives the content. */
     target: z.enum(["active", "new"]).optional(),
-    /** Whether to send the content immediately. */
-    send: z.literal(true).optional(),
+    /** Whether to send immediately or leave an editable draft. */
+    send: z.boolean().optional(),
   })
   .strict();
 
@@ -37,7 +37,7 @@ export const OpenAIMessageParamsSchema = RequestSchema.shape.params
 export type OpenAIMessageParams = z.infer<typeof OpenAIMessageParamsSchema>;
 
 export type OpenAIMessage = {
-  /** Sends to the active or a new conversation. */
+  /** Sends or drafts content in the active or a new conversation. */
   send(
     params: OpenAIMessageParams,
     options?: RequestOptions,

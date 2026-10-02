@@ -32,7 +32,13 @@ export const previewImagesSchema = z.object({
 });
 export type PreviewImages = z.infer<typeof previewImagesSchema>;
 
+export const displaySourceSchema = z.object({
+  format: modelFormatSchema,
+  url: z.string(),
+});
+
 export const publicCadPartSchema = z.object({
+  displaySource: displaySourceSchema.optional(),
   description: z.string(),
   fileName: z.string(),
   format: cadFormatSchema,
@@ -51,8 +57,12 @@ export const partsResultSchema = z.object({
   parts: z.array(publicCadPartSchema),
 });
 export const partResultSchema = z.object({ part: publicCadPartSchema });
-export const partBytesResultSchema = z.object({
-  blob: z.string(),
-  format: modelFormatSchema,
-  part: publicCadPartSchema,
-});
+export const partSourceResultSchema = z
+  .object({
+    blob: z.string(),
+    format: modelFormatSchema,
+    part: publicCadPartSchema,
+  })
+  .or(displaySourceSchema);
+
+export type PartSourceResult = z.infer<typeof partSourceResultSchema>;

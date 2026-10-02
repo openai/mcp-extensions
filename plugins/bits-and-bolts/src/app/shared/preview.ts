@@ -2,9 +2,6 @@ import {
   Box3,
   Color,
   Mesh,
-  MeshBasicMaterial,
-  MeshPhongMaterial,
-  MeshStandardMaterial,
   OrthographicCamera,
   Scene,
   Vector3,
@@ -26,6 +23,9 @@ export async function renderCadPreviews(
   }
 
   const model = await parseMeshModel(format, bytes);
+  model.traverse((object) => {
+    if (object instanceof Mesh) object.castShadow = object.receiveShadow = true;
+  });
   let renderer: WebGLRenderer | null = null;
   let lighting: ReturnType<typeof addStudioLighting> | null = null;
   try {
@@ -37,9 +37,7 @@ export async function renderCadPreviews(
     renderer.setPixelRatio(1);
     renderer.setSize(420, 260, false);
     const scene = new Scene();
-    scene.background = new Color(
-      getComputedStyle(document.body).backgroundColor,
-    );
+    scene.background = new Color(0xffffff);
     scene.add(model);
 
     const box = new Box3().setFromObject(model);
@@ -61,36 +59,13 @@ export async function renderCadPreviews(
       0.01,
       100000,
     );
-    const images: PreviewImages = {};
-    const views: Array<[keyof PreviewImages, Vector3, boolean]> = [
-      ["isometric", new Vector3(1, -1, 0.85), false],
-      ["front", new Vector3(0, -1, 0.08), false],
-      ["top", new Vector3(0, 0, 1), false],
-      ["wireframe", new Vector3(1, -1, 0.85), true],
-    ];
-    for (const [name, direction, wireframe] of views) {
-      model.traverse((object) => {
-        if (!(object instanceof Mesh)) return;
-        object.castShadow = object.receiveShadow = !wireframe;
-        for (const material of Array.isArray(object.material)
-          ? object.material
-          : [object.material]) {
-          if (
-            material instanceof MeshStandardMaterial ||
-            material instanceof MeshPhongMaterial ||
-            material instanceof MeshBasicMaterial
-          )
-            material.wireframe = wireframe;
-        }
-      });
-      camera.position.copy(direction.normalize().multiplyScalar(radius * 4));
-      camera.up.set(0, 0, 1);
-      camera.lookAt(0, 0, 0);
-      camera.updateProjectionMatrix();
-      renderer.render(scene, camera);
-      images[name] = renderer.domElement.toDataURL("image/jpeg", 0.82);
-    }
-    return images;
+    camera.position.copy(
+      new Vector3(1, -1, 0.85).normalize().multiplyScalar(radius * 4),
+    );
+    camera.up.set(0, 0, 1);
+    camera.lookAt(0, 0, 0);
+    renderer.render(scene, camera);
+    return { isometric: renderer.domElement.toDataURL("image/jpeg", 0.82) };
   } finally {
     disposeObjectResources(model);
     lighting?.dispose();

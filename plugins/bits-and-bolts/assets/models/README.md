@@ -9,7 +9,7 @@ The library includes the complete assembly, sculpted dial, joystick cap, translu
 - [Work Louder product photos and layout drawing](https://worklouder.cc/codex-micro).
 - [OpenAI product photos and keyset](https://openai.com/supply/co-lab/work-louder/).
 - [Work Louder MX keycap spacing](https://worklouder.cc/wrk-mx-pure): 19.05 × 19.05 mm.
-- Legend outlines are included in [the keycap assets](../keycap-legends/). The SVG filename for each legend is recorded in `../keycap-legends/keycaps.json`. The physical photos determine the keyset, rather than extra software-only key variants.
+- Legend outlines are included in [the keycap assets](../keycap-legends/). The source path for each copied SVG is recorded in `../keycap-legends/keycaps.json`. The physical photos determine the keyset, rather than extra software-only key variants.
 
 The estimated body is 108 × 108 mm. The caps are 18 mm wide on a 19.05 mm pitch. The 2U cap is 37.05 mm wide. Body thickness, cap dishes, stems, mounting recesses, fasteners, and port placement are photo-based estimates. The original placeholder STLs were not used to determine geometry.
 

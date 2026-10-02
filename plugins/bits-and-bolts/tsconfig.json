@@ -4,6 +4,7 @@
     "jsx": "react-jsx",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "resolveJsonModule": true,
     "noEmit": true,
     "skipLibCheck": true,
     "strict": true,

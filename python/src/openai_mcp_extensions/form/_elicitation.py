@@ -14,10 +14,10 @@ from mcp.server.elicitation import (
 from mcp.server.mcpserver.context import Context
 from mcp.shared.message import ServerMessageMetadata
 from mcp_types import ElicitRequestFormParams, ElicitResult, Request, ServerRequest
+from openai_mcp_form_protocol import FormField, FormSchema, validate_form_selections
 from pydantic import ValidationError
 
 from openai_mcp_extensions.form._schema import render_form_schema
-from openai_mcp_form_protocol import FormField, FormSchema, validate_form_selections
 
 OPENAI_ELICITATION_EXTENSION_ID = "openai/elicitation"
 OPENAI_ELICITATION_METHOD = "openai/elicitation/create"
@@ -61,6 +61,14 @@ async def elicit_form(
         ),
     )
 
+    return validate_form_result(result, schema, requested_schema)
+
+
+def validate_form_result(
+    result: ElicitResult,
+    schema: type[ElicitSchemaModelT],
+    requested_schema: dict[str, Any],
+) -> ElicitationResult[ElicitSchemaModelT]:
     if result.action == "accept":
         if result.content is None:
             raise ValueError("Received an accepted elicitation with no content")

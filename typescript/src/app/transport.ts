@@ -10,6 +10,7 @@ export type AppMessage = {
   error?: { code: number; message: string };
 };
 
+/** @deprecated Use App from @modelcontextprotocol/ext-apps with OpenAIExtensions instead. */
 export function createAppTransport<
   Payload extends Record<string, unknown> = Record<string, unknown>,
 >() {

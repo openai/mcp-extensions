@@ -24,6 +24,15 @@ export async function elicitCadForm(
     const field = value as Record<string, unknown>;
     if (field["x-openai-input"] != null)
       throw Error("File inputs require openai/elicitation form support.");
+    if (
+      value.type === "array" &&
+      !("enum" in value.items && value.items.enum != null) &&
+      !("anyOf" in value.items && value.items.anyOf != null)
+    ) {
+      if (params.requestedSchema.required?.includes(name))
+        throw Error("Custom values require openai/elicitation form support.");
+      continue;
+    }
     const choices = field["oneOf"] as
       Array<Record<string, unknown>> | undefined;
     properties[name] = choices?.some(

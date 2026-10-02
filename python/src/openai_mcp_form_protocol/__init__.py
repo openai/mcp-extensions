@@ -6,7 +6,7 @@ import math
 import re
 from collections.abc import Collection, Mapping, Sequence
 from datetime import date, datetime
-from typing import Annotated, Generic, Literal, TypeVar, cast
+from typing import Annotated, Generic, Literal, TypeVar
 from urllib.parse import urlsplit
 
 from email_validator import validate_email
@@ -141,7 +141,7 @@ class _ResourceInput(FormModel):
     user_options: _UserResourceOptions | None = Field(default=None, alias="userOptions")
 
     @model_validator(mode="after")
-    def validate_options(self) -> _ResourceInput:
+    def validate_input(self) -> _ResourceInput:
         if self.selection == "implicit" and self.user_options is None:
             self.user_options = _UserResourceOptions()
         if any(not _valid_uri(option.uri) for option in self.options):
@@ -391,7 +391,7 @@ def _valid_value(
     ):
         choices = {option.uri for option in field.file_input.options}
         choices.update(uploaded_uris)
-        selected = cast(list[object], value) if isinstance(value, list) else [value]
+        selected = value if isinstance(value, list) else [value]
         if any(not isinstance(uri, str) or uri not in choices for uri in selected):
             return False
     if (
@@ -414,7 +414,6 @@ def _valid_value(
     if field.type == "array":
         if not isinstance(value, list) or field.items is None:
             return False
-        value = cast(list[object], value)
         count = len(value) + pending_uploads
         if (field.min_items is not None and count < field.min_items) or (
             field.max_items is not None and count > field.max_items

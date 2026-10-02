@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import inspect
 from collections.abc import Awaitable, Callable, Sequence
-from typing import Annotated, Any, Generic, Literal, TypeVar, cast
+from typing import Annotated, Any, Generic, Literal, TypeVar
 
 import anyio.to_thread
 from mcp.server.context import CallNext, HandlerResult, ServerRequestContext
@@ -45,7 +45,11 @@ class OpenAISettingsTool(OpenAIStrictModel):
 
     kind: Literal["tool"] = "tool"
     tool: NonBlankString
-    title: NonBlankString
+    title: NonBlankString | None = Field(
+        default=None,
+        deprecated="Set the title on the referenced MCP tool. Hosts ignore this field.",
+        exclude_if=lambda value: value is None,
+    )
     description: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
@@ -142,7 +146,7 @@ class OpenAISettings(Extension, Generic[ValuesT]):
                         field.get("type") != "string"
                         or not isinstance(enum, list)
                         or not enum
-                        or any(not isinstance(value, str) for value in cast(list[object], enum))
+                        or any(not isinstance(value, str) for value in enum)
                     )
                 )
             ):

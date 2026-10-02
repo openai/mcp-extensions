@@ -2,7 +2,7 @@
 
 This SDK provides TypeScript APIs that extend the official [@modelcontextprotocol/sdk](https://www.npmjs.com/package/@modelcontextprotocol/sdk) and [@modelcontextprotocol/ext-apps](https://www.npmjs.com/package/@modelcontextprotocol/ext-apps) SDKs to make it easier to implement the [OpenAI MCP Extensions spec](../docs/spec.md) for TypeScript MCP Servers and MCP Apps.
 
-Use `@openai/mcp-extensions/server` for server code and `@openai/mcp-extensions/app` for app code. This SDK and README contain examples that run in MCP Apps and on MCP Servers. You can identify where a given code block should be used from its imports.
+Use `@openai/mcp-extensions` for shared types and schemas, `@openai/mcp-extensions/server` for server code and `@openai/mcp-extensions/app` for app code. This SDK and README contain examples that run in MCP Apps and on MCP Servers. You can identify where a given code block should be used from its imports.
 
 ## Installation
 
@@ -392,6 +392,18 @@ if (message != null) {
 }
 ```
 
+Open a fresh editable draft:
+
+```ts
+await openaiExtensions.message?.send({
+  role: "user",
+  content: [{ type: "text", text: "Help me design a bracket." }],
+  _meta: {
+    "openai/message": { target: "new", send: false },
+  },
+});
+```
+
 ## [Opening Local Files](../docs/spec.md#opening-local-files)
 
 ```ts
@@ -495,9 +507,84 @@ openaiExtensions.mentions.setHandler(async ({ query }) => ({
 
 ## [Form Elicitation](../docs/spec.md#openai-form-elicitation)
 
-**NOTE:** OpenAI-registered MCP servers require [MRTR for form elicitation](../docs/spec.md#openai-form-elicitation). Direct MCP connections still support legacy forms through `elicitInput`, which does not implement MRTR.
+### Multi-round-trip Requests
 
-### Suggested Values
+**NOTE:** OpenAI-registered MCP servers require MCP `2026-07-28` or later and multi-round-trip requests for form elicitation. Direct MCP connections still support legacy forms.
+
+```ts
+import { McpServer } from "@modelcontextprotocol/server";
+import { requestFormInput } from "@openai/mcp-extensions/server";
+
+const server = new McpServer({ name: "forms", version: "1" });
+server.registerTool("choose_image", {}, (context) => {
+  const result = requestFormInput(context, {
+    key: "image",
+    mode: "form",
+    message: "Choose a reference image",
+    requestedSchema: {
+      type: "object",
+      properties: {
+        images: {
+          type: "array",
+          items: { type: "string", format: "uri" },
+          minItems: 1,
+          maxItems: 1,
+          "x-openai-input": {
+            type: "resource",
+            options: [{ uri: "file:///image.png", name: "image.png" }],
+          },
+        },
+      },
+      required: ["images"],
+    },
+  });
+  if ("resultType" in result) return result;
+  return { content: [], structuredContent: result };
+});
+```
+
+### Legacy requests
+
+MCP Servers that do not yet support `2026-07-28` MUST use the legacy `openai/elicitation/create` flow.
+
+```ts
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { OpenAIExtensions } from "@openai/mcp-extensions/server";
+
+const server = new McpServer({ name: "forms", version: "1" });
+const openaiExtensions = new OpenAIExtensions(server);
+
+server.registerTool("choose_image", {}, async () => {
+  const result = await openaiExtensions.elicitInputLegacy({
+    mode: "form",
+    message: "Choose reference images",
+    requestedSchema: {
+      type: "object",
+      properties: {
+        images: {
+          type: "array",
+          items: { type: "string", format: "uri" },
+          minItems: 1,
+          maxItems: 1,
+          "x-openai-input": {
+            type: "resource",
+            options: [{ uri: "file:///image.png", name: "image.png" }],
+          },
+        },
+      },
+      required: ["images"],
+    },
+  });
+
+  return { content: [], structuredContent: result };
+});
+```
+
+### Examples
+
+The following examples work with multi round-trip requests and legacy requests.
+
+#### Suggested Values
 
 Users can enter values that are not listed. The same field constraints apply to suggested and entered values.
 
@@ -524,51 +611,43 @@ const reviewSchema = {
 } satisfies OpenAIForm;
 ```
 
-### Resource Selection
+#### Resource Selection
 
 ```ts
-import { OpenAIExtensions } from "@openai/mcp-extensions/server";
+import type { OpenAIForm } from "@openai/mcp-extensions/server";
 
-const result = await openaiExtensions.elicitInput({
-  mode: "form",
-  message: "Choose reference images",
-  requestedSchema: {
-    type: "object",
-    properties: {
-      images: {
-        type: "array",
-        items: { type: "string", format: "uri" },
-        maxItems: 5,
-        default: ["file:///images/sales.png"],
-        "x-openai-input": {
-          type: "resource",
-          options: [
-            {
-              uri: "file:///images/sales.png",
-              name: "sales.png",
-              title: "Sales image",
-              _meta: {
-                "openai/thumbnail": { src: "https://example.com/sales.png" },
-                "openai/preview": {
-                  target: {
-                    type: "resource_link",
-                    uri: "file:///images/sales.png",
-                    name: "sales.png",
-                    mimeType: "image/png",
-                  },
+const requestedSchema = {
+  type: "object",
+  properties: {
+    images: {
+      type: "array",
+      items: { type: "string", format: "uri" },
+      maxItems: 5,
+      default: ["file:///images/sales.png"],
+      "x-openai-input": {
+        type: "resource",
+        options: [
+          {
+            uri: "file:///images/sales.png",
+            name: "sales.png",
+            title: "Sales image",
+            _meta: {
+              "openai/thumbnail": { src: "https://example.com/sales.png" },
+              "openai/preview": {
+                target: {
+                  type: "resource_link",
+                  uri: "file:///images/sales.png",
+                  name: "sales.png",
+                  mimeType: "image/png",
                 },
               },
             },
-          ],
-          userOptions: { accept: ["image/*"] },
-        },
+          },
+        ],
+        userOptions: { accept: ["image/*"] },
       },
     },
-    required: ["images"],
   },
-});
-
-if (result.action === "accept") {
-  await createPresentation({ images: result.content.images });
-}
+  required: ["images"],
+} satisfies OpenAIForm;
 ```

@@ -1,13 +1,15 @@
-import type { BufferGeometry, Material, Object3D } from "three";
 import {
+  BufferGeometry,
   Color,
   DoubleSide,
   Group,
   ImageBitmapLoader,
   Line,
+  Material,
   Mesh,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
+  Object3D,
   Points,
   Texture,
 } from "three";
