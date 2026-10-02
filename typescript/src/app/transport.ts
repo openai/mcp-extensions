@@ -10,10 +10,12 @@ export type AppMessage = {
   error?: { code: number; message: string };
 };
 
+// Replies can outlive the transport that sent the request.
+let requestSequence = 0;
+
 export function createAppTransport<
   Payload extends Record<string, unknown> = Record<string, unknown>,
 >() {
-  let sequence = 0;
   const pending = new Map<
     number | string,
     {
@@ -78,7 +80,7 @@ export function createAppTransport<
         return Promise.reject(
           new Error(`Open this app in an MCP host to use ${method}`),
         );
-      const id = ++sequence;
+      const id = ++requestSequence;
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
           pending.delete(id);

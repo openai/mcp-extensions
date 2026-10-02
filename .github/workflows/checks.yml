@@ -91,6 +91,9 @@ jobs:
       - name: Check TypeScript
         run: pnpm check
 
+      - name: Check app transport regressions
+        run: pnpm --filter @openai/mcp-extensions exec node --test tests/transport.test.mjs
+
       - name: Check CAD plugin regressions
         run: pnpm --filter bits-and-bolts exec node scripts/test.mjs
 
