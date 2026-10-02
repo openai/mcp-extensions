@@ -5,14 +5,14 @@ from typing import Any
 from mcp.server.context import CallNext, HandlerResult, ServerRequestContext
 
 from openai_mcp_extensions.form._elicitation import OPENAI_ELICITATION_EXTENSION_ID
-from openai_mcp_extensions.form._mrtr import _request_schemas
+from openai_mcp_extensions.form._mrtr import request_schemas
 
 
 async def middleware(ctx: ServerRequestContext[Any, Any], call_next: CallNext) -> HandlerResult:
     """Preserve OpenAI form fields in MCP responses."""
     # Keep form schemas separate for each server request.
     schemas: dict[str, dict[str, Any]] = {}
-    token = _request_schemas.set(schemas)
+    token = request_schemas.set(schemas)
     try:
         result = await call_next(ctx)
         # The Python SDK drops form metadata when preparing the response.
@@ -28,4 +28,4 @@ async def middleware(ctx: ServerRequestContext[Any, Any], call_next: CallNext) -
         return result
     finally:
         # Restore the previous request context, even after errors.
-        _request_schemas.reset(token)
+        request_schemas.reset(token)

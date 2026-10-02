@@ -14,7 +14,7 @@ from openai_mcp_extensions.form._elicitation import (
 )
 from openai_mcp_extensions.form._schema import render_form_schema
 
-_request_schemas: ContextVar[dict[str, dict[str, Any]] | None] = ContextVar(
+request_schemas: ContextVar[dict[str, dict[str, Any]] | None] = ContextVar(
     "openai_elicitation_schemas", default=None
 )
 
@@ -32,7 +32,7 @@ def request_form_input(
         raise ValueError(
             "MRTR requires MCP 2026-07-28 or later; use elicit_input_legacy for older clients"
         )
-    schemas = _request_schemas.get()
+    schemas = request_schemas.get()
     if schemas is None:
         raise RuntimeError(
             "Register OpenAIExtensions.middleware on MCPServer before requesting MRTR forms"

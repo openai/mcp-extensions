@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import inspect
 from collections.abc import Awaitable, Callable, Sequence
-from typing import Annotated, Any, Generic, Literal, TypeVar
+from typing import Annotated, Any, Generic, Literal, TypeVar, cast
 
 import anyio.to_thread
 from mcp.server.context import CallNext, HandlerResult, ServerRequestContext
@@ -146,7 +146,7 @@ class OpenAISettings(Extension, Generic[ValuesT]):
                         field.get("type") != "string"
                         or not isinstance(enum, list)
                         or not enum
-                        or any(not isinstance(value, str) for value in enum)
+                        or any(not isinstance(value, str) for value in cast(list[object], enum))
                     )
                 )
             ):
