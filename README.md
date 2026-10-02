@@ -57,6 +57,10 @@ Read further:
 - [docs/spec.md](docs/spec.md) lists all supported extensions.
 - [docs/patterns.md](docs/patterns.md) covers best practices.
 
+### 4. Propose an extension
+
+Help us help you build better extensions by [submitting an extension proposal](https://github.com/openai/mcp-extensions/issues/new?template=extension-proposal.md).
+
 ## License
 
 This project is licensed under the [Apache License 2.0](LICENSE).
