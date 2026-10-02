@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Annotated, Any, Literal
 
-import anyio.to_thread
 from mcp.server.extension import ToolBinding
 from mcp.server.mcpserver.context import Context
 from mcp_types import CallToolResult, Icon, ResourceLink, ToolAnnotations
 from pydantic import Field
 
+from openai_mcp_extensions._handlers import call_handler
 from openai_mcp_extensions._models import NonBlankString, OpenAIModel, OpenAIStrictModel
 
 
@@ -73,16 +72,8 @@ class OpenAIMentions:
         ) -> Annotated[CallToolResult, OpenAIMentionSearchResult]:
             params = OpenAIMentionSearchParams(query=query)
             handler = self._handler
-            if handler is None:
-                result = OpenAIMentionSearchResult(items=[])
-            else:
-                if inspect.iscoroutinefunction(handler) or inspect.iscoroutinefunction(
-                    handler.__call__
-                ):
-                    handled = handler(params, ctx)
-                else:
-                    handled = await anyio.to_thread.run_sync(handler, params, ctx)
-                result = await handled if inspect.isawaitable(handled) else handled
+            assert handler is not None  # tools() only binds this tool after registration.
+            result = await call_handler(handler, params, ctx)
 
             return CallToolResult(
                 content=[],

@@ -23,6 +23,48 @@ from openai_mcp_extensions import (
 
 
 class MentionHandlerTests(unittest.IsolatedAsyncioTestCase):
+    def test_unregistered_handler_contributes_no_tools(self) -> None:
+        self.assertEqual(OpenAIExtensions().tools(), ())
+
+    async def test_handler_replacement_after_server_creation(self) -> None:
+        extensions = OpenAIExtensions()
+        calls: list[str] = []
+
+        @extensions.mentions.search
+        def original(
+            params: OpenAIMentionSearchParams, ctx: Context[Any, Any]
+        ) -> OpenAIMentionSearchResult:
+            calls.append("original")
+            return OpenAIMentionSearchResult(items=[])
+
+        server = MCPServer("mentions", extensions=[extensions])
+
+        @extensions.mentions.search
+        def replacement(
+            params: OpenAIMentionSearchParams, ctx: Context[Any, Any]
+        ) -> OpenAIMentionSearchResult:
+            calls.append("replacement")
+            return OpenAIMentionSearchResult(
+                items=[
+                    OpenAIMentionResource(resource_uri="file:///replacement", title="Replacement")
+                ]
+            )
+
+        result = await server.call_tool("search_mentions", {"query": "needle"})
+        self.assertEqual(calls, ["replacement"])
+        self.assertEqual(
+            result.structured_content,
+            {
+                "items": [
+                    {
+                        "type": "resource",
+                        "resourceUri": "file:///replacement",
+                        "title": "Replacement",
+                    }
+                ]
+            },
+        )
+
     async def test_blocking_sync_handler_keeps_loop_responsive(self) -> None:
         extensions = OpenAIExtensions()
         started = threading.Event()
@@ -97,7 +139,7 @@ class MentionHandlerTests(unittest.IsolatedAsyncioTestCase):
                 extensions.mentions.search(handler)
                 server = MCPServer("mentions", extensions=[extensions])
                 with patch(
-                    "openai_mcp_extensions.mentions.anyio.to_thread.run_sync",
+                    "openai_mcp_extensions._handlers.anyio.to_thread.run_sync",
                     side_effect=AssertionError("async handlers must not be offloaded"),
                 ):
                     result = await server.call_tool("search_mentions", {"query": ""})

@@ -160,8 +160,6 @@ def opened_file_path(context: Context[Any, Any]) -> str | None:
 
 ## [Composer Mentions](../docs/spec.md#composer-at-mentions)
 
-Synchronous search handlers run in worker threads so blocking searches do not stall the server's event loop. Multiple searches can overlap, so shared state must be thread-safe. Use an async handler for resources tied to the event loop or to the thread that created them. Async handlers, including async callable objects, run on the event loop. If a synchronous handler returns an awaitable, it is awaited on the event loop as well. The synchronous call itself has no running event loop; use an async handler if it needs to create asyncio tasks or futures.
-
 ```python
 from typing import Any
 
