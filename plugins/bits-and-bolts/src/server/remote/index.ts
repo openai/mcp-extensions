@@ -116,7 +116,11 @@ const mcp = createMcpHandler(
       server: {
         server: server.server,
         registerResource: server.registerResource.bind(server),
-        registerTool(name, definition, handler) {
+        registerTool: ((
+          name: Parameters<McpServer["registerTool"]>[0],
+          definition: Parameters<McpServer["registerTool"]>[1],
+          handler: Parameters<McpServer["registerTool"]>[2],
+        ) => {
           return server.registerTool(
             name,
             {
@@ -125,7 +129,7 @@ const mcp = createMcpHandler(
             },
             handler,
           );
-        },
+        }) as McpServer["registerTool"],
       },
       title: "Bits & Bolts Remote",
       html,
@@ -202,7 +206,7 @@ async function route(request: Request): Promise<Response> {
     if (file) {
       const bytes = library.file(account, file[1]);
       return bytes
-        ? new Response(bytes, {
+        ? new Response(Uint8Array.from(bytes), {
             headers: { "Content-Type": "application/octet-stream" },
           })
         : new Response("Not found", { status: 404 });

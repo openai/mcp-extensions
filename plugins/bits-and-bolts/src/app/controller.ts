@@ -996,7 +996,6 @@ export function startApp() {
     await unsubscribe().catch(() => {});
     library.dispose();
     renderer.dispose();
-    setTimeout(() => void app.close(), 0);
     return {};
   };
   const callTool = app.oncalltool!;
@@ -1048,7 +1047,7 @@ export function startApp() {
     draw();
     queueContext();
   };
-  const chatAction = (fn: () => Promise<void>) => async () => {
+  const chatAction = (fn: () => void | Promise<void>) => async () => {
     $("chat-status").textContent = "";
     try {
       await fn();
