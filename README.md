@@ -46,7 +46,7 @@ Install the Bits & Bolts Remote plugin:
 
 ### 2. Integrate extensions
 
-Integrate relevant extensions into your plugin. Optionally use [Plugin Creator](https://chatgpt.com/plugins/plugin_connector_1p_e1a10c53223481918a42f1510ec46c1e) to speed up the integration.
+Use [Plugin Creator](https://chatgpt.com/plugins/plugin_connector_1p_e1a10c53223481918a42f1510ec46c1e) and ask it about workflows you want in your plugin and how extensions can close those gaps.
 
 ### 3. Explore supported extensions
 
