@@ -251,7 +251,7 @@ test("MRTR exchanges preserve extended schemas and consume validated retry answe
           if ("resultType" in result) return result;
           if (result.action === "accept") {
             saved.push(result.content);
-            assert.equal(context.mcpReq.requestState, "resume-1");
+            assert.equal(context.mcpReq.requestState(), "resume-1");
           }
           return { content: [], structuredContent: result };
         },
