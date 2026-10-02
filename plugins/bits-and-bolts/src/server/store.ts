@@ -1,17 +1,15 @@
-import type { CadPreferences, PublicCadPart } from "../shared/contracts.js";
-import type { PackedMesh } from "../app/renderers/types.js";
+import type {
+  CadPreferences,
+  PartSourceResult,
+  PublicCadPart,
+} from "../shared/contracts.js";
 export interface CatalogStore {
   list(): Promise<PublicCadPart[]>;
   get(id: string): Promise<PublicCadPart | null>;
   read(
     id: string,
     representation: "source" | "display",
-  ): Promise<{
-    part: PublicCadPart;
-    format: string;
-    blob?: string;
-    mesh?: PackedMesh;
-  }>;
+  ): Promise<PartSourceResult>;
   import(input: {
     blob: string;
     fileName: string;

@@ -6,12 +6,18 @@ import inspect
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Annotated, Any, Literal
 
-from mcp.server.extension import ToolBinding
+from mcp.server.extension import Extension, ToolBinding
 from mcp.server.mcpserver.context import Context
 from mcp_types import CallToolResult, Icon, ResourceLink, ToolAnnotations
 from pydantic import Field
 
 from openai_mcp_extensions._models import NonBlankString, OpenAIModel, OpenAIStrictModel
+
+OPENAI_MENTIONS_CAPABILITY_KEY = "openai/mentions"
+
+
+class OpenAIMentionsCapability(OpenAIModel):
+    search_tool: NonBlankString
 
 
 class OpenAIMentionResource(OpenAIStrictModel):
@@ -48,11 +54,18 @@ OpenAIMentionSearchHandler = Callable[
 ]
 
 
-class OpenAIMentions:
+class OpenAIMentions(Extension):
     """Register one app-visible mention-search handler."""
+
+    identifier = OPENAI_MENTIONS_CAPABILITY_KEY
 
     def __init__(self) -> None:
         self._handler: OpenAIMentionSearchHandler | None = None
+
+    def settings(self) -> dict[str, Any]:
+        if self._handler is None:
+            raise ValueError("Register a mention search handler before adding the extension.")
+        return OpenAIMentionsCapability(search_tool="search_mentions").model_dump(by_alias=True)
 
     def search(self, handler: OpenAIMentionSearchHandler) -> OpenAIMentionSearchHandler:
         """Register or replace the mention-search handler."""

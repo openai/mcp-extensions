@@ -1,15 +1,8 @@
-export type Point = [number, number, number];
-export type Triangle = Point[];
-export type PackedMesh = {
-  origin: number[];
-  step: number;
-  positions: string;
-  indices: string;
-};
+import type { ModelFormat, PreviewImages } from "../../shared/contracts.js";
+
 export type ModelSource = {
   format: string;
-  bytes?: ArrayBuffer;
-  mesh?: PackedMesh;
+  bytes: ArrayBuffer;
 };
 export type RenderState = {
   camera: string;
@@ -28,18 +21,25 @@ export type RendererOptions = {
   readWasm: () => Promise<Uint8Array>;
 };
 export type Renderer = {
+  previews(format: ModelFormat, bytes: ArrayBuffer): Promise<PreviewImages>;
   formats: string[];
   cameras: string[];
   modes: string[];
-  load(source: ModelSource, isCurrent?: () => boolean): Promise<void>;
-  draw(state: RenderState): void;
-  bounds(): { size: number[] };
+  load(
+    source: ModelSource,
+    isCurrent: () => boolean,
+    settings: RenderState,
+  ): Promise<void>;
+  camera(): Pick<RenderState, "camera" | "yaw" | "pitch" | "zoom"> | null;
+  configure(state: Partial<RenderState>): void;
+  bounds(): { size: number[]; assumedMillimeters: boolean };
   triangleCount(): number;
   fit(): void;
   rotate(): void;
   exportStl(): string;
   context?(): unknown;
   capture(): { data: string; mimeType: string };
+  capturePreviews(): PreviewImages;
   clear(): void;
   clearSelection(): void;
   dispose(): void;

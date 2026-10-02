@@ -141,7 +141,7 @@ class _ResourceInput(FormModel):
     user_options: _UserResourceOptions | None = Field(default=None, alias="userOptions")
 
     @model_validator(mode="after")
-    def validate_options(self) -> _ResourceInput:
+    def validate_input(self) -> _ResourceInput:
         if self.selection == "implicit" and self.user_options is None:
             self.user_options = _UserResourceOptions()
         if any(not _valid_uri(option.uri) for option in self.options):

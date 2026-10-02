@@ -1,5 +1,9 @@
 # OpenAI MCP Extensions Specification
 
+For app design and compatibility guidance, see:
+
+[patterns.md](patterns.md)
+
 This specification defines extensions to [MCP](https://modelcontextprotocol.io/specification/2025-11-25/index) and [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/c55a3a231fb76303376e059aef9a13367e72731c/specification/draft/apps.mdx) for use across ChatGPT, including ChatGPT Work, ChatGPT Desktop, and ChatGPT mobile apps.
 
 The MCP spec provides capabilities that work across MCP hosts. These extensions allow deeper integration into ChatGPT, enabling you to build richer features for your users than the standard MCP spec allows.
@@ -13,29 +17,36 @@ This spec outlines every extension and exactly how it builds on top of the exist
 
 ## Platform Support
 
-This table describes expected support at DevDay launch. Web refers to the Work browser; classic ChatGPT is excluded. Asterisks indicate platform limitations described in the corresponding sections.
+This table describes current production support. Web refers to ChatGPT Work in the browser. Classic ChatGPT is outside this table’s scope. Web support on Free is rolling out, and Go support is pending. Mobile support requires app version 1.2026.265 or newer. Asterisks indicate limitations described in the corresponding sections.
 
-| Feature                                             | Desktop   | Web           | iOS                                 | Android                             |
-| --------------------------------------------------- | --------- | ------------- | ----------------------------------- | ----------------------------------- |
-| [Global entrypoint](#global-entrypoint)             | Supported | Supported     | Supported                           | Supported                           |
-| [Thread entrypoint](#thread-entrypoint)             | Supported | Supported     | Supported                           | Supported                           |
-| [File entrypoint](#file-extension-entrypoint)       | Supported | Not supported | Not supported                       | Not supported                       |
-| [Structured settings](#structured-settings)         | Supported | Supported     | Supported                           | Supported                           |
-| [Resource display modes](#display-modes)            | Supported | Supported     | Supported                           | Supported                           |
-| [MCP App deep links](#deep-links)                   | Supported | Supported     | Supported                           | Not supported                       |
-| [Messages](#uimessage-extensions)                   | Supported | Supported     | [Supported*](#uimessage-extensions) | [Supported*](#uimessage-extensions) |
-| [Plugin onboarding](#plugin-onboarding)             | Supported | Supported     | Supported                           | Supported                           |
-| [Model context](#uiupdate-model-context-extensions) | Supported | Supported     | [Supported*](#thumbnails)           | Supported                           |
-| [File opening](#opening-local-files)                | Supported | Not supported | Not supported                       | Not supported                       |
-| [File resources](#filesystem-access)                | Supported | Not supported | Not supported                       | Not supported                       |
-| [Composer at-mentions](#composer-at-mentions)       | Supported | Not supported | Not supported                       | Not supported                       |
-| [OpenAI form elicitation](#openai-form-elicitation) | Supported | Supported     | Not supported                       | Not supported                       |
+| Feature                                             | Desktop   | Web                                              | iOS                                 | Android                             |
+| --------------------------------------------------- | --------- | ------------------------------------------------ | ----------------------------------- | ----------------------------------- |
+| [Global entrypoint](#global-entrypoint)             | Supported | Supported                                        | Supported                           | Supported                           |
+| [Thread entrypoint](#thread-entrypoint)             | Supported | Supported                                        | Supported                           | Supported                           |
+| [File entrypoint](#file-extension-entrypoint)       | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [Structured settings](#structured-settings)         | Supported | Supported                                        | Supported                           | Supported                           |
+| [Resource display modes](#display-modes)            | Supported | Supported                                        | Supported                           | Supported                           |
+| [MCP App deep links](#deep-links)                   | Supported | Supported                                        | Supported                           | Not supported                       |
+| [Messages](#uimessage-extensions)                   | Supported | Supported                                        | [Supported*](#uimessage-extensions) | [Supported*](#uimessage-extensions) |
+| [Plugin onboarding](#plugin-onboarding)             | Supported | Supported                                        | Supported                           | Supported                           |
+| [Model context](#uiupdate-model-context-extensions) | Supported | [Supported*](#uiupdate-model-context-extensions) | [Supported*](#thumbnails)           | Supported                           |
+| [File opening](#opening-local-files)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [File resources](#filesystem-access)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [Composer at-mentions](#composer-at-mentions)       | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [OpenAI form elicitation](#openai-form-elicitation) | Supported | [Supported*](#resource-selection)                | Not supported                       | Not supported                       |
+
+## Server Capabilities
+
+Servers advertise named capabilities at these locations:
+
+| MCP Protocol version    | Result            | Capability location                                                   |
+| ----------------------- | ----------------- | --------------------------------------------------------------------- |
+| `2026-07-28` or newer   | `server/discover` | `capabilities["extensions"]`                                          |
+| `2025-11-25` or earlier | `initialize`      | `capabilities["extensions"]` or legacy `capabilities["experimental"]` |
 
 ## MCP App Entrypoints
 
 Normally, [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/c55a3a231fb76303376e059aef9a13367e72731c/specification/draft/apps.mdx) can only be invoked via the model. However, it may be convenient to allow users to open your MCP App via static entrypoints.
-
-MCP Servers SHOULD provide a unique title for each thread entrypoint that describes the view’s contents and differs from the plugin name. For example, the Bits & Bolts plugin has a thread entrypoint titled `Parts Tray`.
 
 You can define up to three entrypoints on any MCP App:
 
@@ -47,38 +58,23 @@ You can define up to three entrypoints on any MCP App:
 
 - Entrypoints are registered by adding one or more entries to `_meta["openai/ui"]["entrypoints"]`, as defined below.
 - `_meta["ui"]["visibility"]` normally controls model versus user visibility. This field is ignored when an MCP App is invoked as an entrypoint.
-- MCP Apps SHOULD use the initial tool result for their first render without calling the tool again.
 
-### Icon Guidelines
+### Entrypoint Icons
 
 An icon helps users identify the MCP Server in navigation.
 
-MCP Servers SHOULD provide `icons` on each entrypoint tool in `tools/list`.
-
-#### Tool icon requirements
-
-- Icons SHOULD be SVGs.
-- Icons SHOULD be monochrome with a transparent background and use `currentColor` to match the user's theme.
-- Icons SHOULD use a 20x20px viewport with 1.33px strokes for stroke icons.
-- Icons SHOULD follow the [sidebar icon template](https://www.figma.com/design/k1TPwkpYDbcRQrU34nUnNL/Plugin-icon-template?node-id=0-1).
-
-#### Fallback
-
 Entrypoint icons are resolved in the following priority order:
 
-1. Tool icon (`icons` in `tools/list`).
-2. Local MCP Server icon, or the app logo registered with OpenAI for hosted MCP Apps.
-3. Generic fallback icon.
-
-Server icons come from `_meta["io.modelcontextprotocol/serverInfo"]["icons"]` in `server/discover`; servers without `server/discover` use `serverInfo["icons"]` in `initialize`.
+1. The `icons` property in the MCP App’s `tools/list` entry.
+2. The MCP Server icon for local MCP Servers, or the registered app logo for hosted MCP Apps. Server icons come from `_meta["io.modelcontextprotocol/serverInfo"]["icons"]` in `server/discover`, or `serverInfo["icons"]` in `initialize` for MCP Servers that do not implement `server/discover`.
+3. A generic fallback icon.
 
 ### Titles
 
-All entrypoints will be rendered with a title and an icon.
+All entrypoints will be rendered with a title.
 
 #### Behavior Details
 
-- Servers SHOULD provide a human-readable title on each entrypoint tool.
 - The title comes from the first defined property in the following list on your MCP App’s `tools/list` entry:
   - `title`
   - `annotations["title"]`
@@ -88,12 +84,11 @@ All entrypoints will be rendered with a title and an icon.
 
 Global entrypoints expose apps that users can open fullscreen from global navigation.
 
-![Global CAD Parts Library](resources/01-global-library.png)
+![Global CAD Parts Library](https://github.com/user-attachments/assets/f0db35e7-5bdf-4305-accc-125f93a5f6f8)
 
 #### Behavior Details
 
 - The server MUST accept `{}` as the tool arguments when the entrypoint opens.
-- **Crucial:** Follow the [Icon Guidelines](#icon-guidelines) so your sidebar icon renders correctly.
 - On desktop, global entrypoints open with a composer and thread layout, with the app as a permanent tab. Requests that target the current thread, such as `ui/update-model-context` and `ui/message`, use that thread.
 
 #### Schema
@@ -129,6 +124,27 @@ interface GlobalEntrypoint {
 }
 ```
 
+#### Global header
+
+ChatGPT reserves a header for apps opened from global entrypoints in desktop and web, providing consistent UI with native features and OpenAI MCP capabilities, like account selection, out of the box.
+
+MCP Apps MAY declare `theme-color` meta tags in the resource HTML to customize the background. ChatGPT reads these declarations when the app mounts. If omitted, the host's default background is used.
+
+Example:
+
+```html
+<meta
+  name="theme-color"
+  content="#f5f7fa"
+  media="(prefers-color-scheme: light)"
+/>
+<meta
+  name="theme-color"
+  content="#18202b"
+  media="(prefers-color-scheme: dark)"
+/>
+```
+
 #### Deep Links
 
 Deep links navigate directly to a particular page within a global entrypoint.
@@ -151,7 +167,7 @@ Deep links navigate directly to a particular page within a global entrypoint.
       - The complete app-relative URL, including any query string, MUST be percent-encoded as the `path` query value.
       - The decoded app-relative URL MUST begin with `/` and MUST NOT contain a fragment.
       - If `path` is omitted, the app-relative URL defaults to `/`.
-- MCP Apps receive the specified app-relative URL in `hostContext["openai/deepLink"]` during initialization and through subsequent `ui/notifications/host-context-changed` notifications, following [MCP Apps host-context update semantics](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#L1219-L1229).
+- MCP Apps receive the specified app-relative URL in `hostContext["openai/deepLink"]` during initialization and through subsequent `ui/notifications/host-context-changed` notifications, following [MCP Apps host-context update semantics](https://github.com/modelcontextprotocol/ext-apps/blob/c55a3a231fb76303376e059aef9a13367e72731c/specification/draft/apps.mdx#L1461-L1471).
 
 Web link format:
 
@@ -217,7 +233,7 @@ codex://plugins/bits-and-bolts/app/cad.library?path=%2Fparts%2Fhex-bolt
 
 Thread entrypoints let users manually open an MCP App as a new content tab within a thread.
 
-![CAD Parts Tray in a thread side panel](resources/02-thread-tray.png)
+![CAD Parts Tray in a thread side panel](https://github.com/user-attachments/assets/d737d943-4738-4150-8e09-4205d8720b0e)
 
 #### Behavior Details
 
@@ -264,7 +280,7 @@ File extension entrypoints let MCP Apps advertise support for file types (for ex
 
 File extension entrypoints use extended MCP Resource APIs for reading, subscribing to, and updating the files that invoked them.
 
-![STL file opened in a CAD file extension handler](resources/03-file-viewer.png)
+![STL file opened in a CAD file extension handler](https://github.com/user-attachments/assets/bfa5165b-e4eb-441d-bd9d-3c6514e8fa9a)
 
 #### Capability Advertisement
 
@@ -535,14 +551,11 @@ Response:
 
 Structured settings let MCP Apps contribute settings to the plugin details page within ChatGPT. ChatGPT will render the settings with native controls that match the look and feel of ChatGPT on the current platform.
 
-![Structured settings on the Bits & Bolts plugin page](resources/07-settings-entrypoint.png)
+![Structured settings on the Bits & Bolts plugin page](https://github.com/user-attachments/assets/43723fb8-3da7-4d0d-ae0e-b5fe8c795347)
 
 ### Capability Advertisement
 
-| MCP Protocol version    | Result            | Capability location                                                                                         |
-| ----------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------- |
-| `2026-07-28` or newer   | `server/discover` | `capabilities["extensions"]["openai/settings"]`                                                             |
-| `2025-11-25` or earlier | `initialize`      | `capabilities["extensions"]["openai/settings"]` or legacy `capabilities["experimental"]["openai/settings"]` |
+Servers advertise `openai/settings` through [server capabilities](#server-capabilities).
 
 `initialize` result (MCP `2025-11-25`):
 
@@ -633,7 +646,7 @@ Settings combine primitive fields and tool actions.
   - Fields omitted from `layout` appear in an "Other settings" group after the listed groups.
 - Primitive settings only support boolean, string (with optional enum), number, and integer types.
 - Tool settings may correspond to MCP App tools or regular tools.
-  - ChatGPT settings will render a button with the layout item's `title`.
+  - Tool actions use the referenced tool's display name: `title`, then `annotations.title`, then `name`.
   - Regular tools: when the button is clicked, ChatGPT will render a spinner followed by a tooltip containing text from the tool call response.
   - MCP App tools: when the button is clicked, ChatGPT will render the MCP App in a modal on top of settings. This can be used for bespoke settings such as a payment method entry form.
 
@@ -688,7 +701,8 @@ interface SettingsGroup {
         kind: "tool";
         /** Same-server tool accepting {}. */
         tool: string;
-        title: string;
+        /** @deprecated Set the title on the referenced MCP tool. Hosts ignore this field. */
+        title?: string;
         description?: string;
       }
   )[];
@@ -754,8 +768,7 @@ Response:
             },
             {
               "kind": "tool",
-              "tool": "cad.library",
-              "title": "Browse parts…"
+              "tool": "cad.library"
             }
           ]
         }
@@ -852,23 +865,15 @@ Request:
 
 The MCP Apps specification defines [display modes](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#display-modes) to make it explicit where MCP Apps can be rendered and where they are currently rendered.
 
-![Bits & Bolts in inline and fullscreen display modes](resources/11-display-modes.png)
+![Bits & Bolts in inline and fullscreen display modes](https://github.com/user-attachments/assets/46236a5d-0437-4088-9c52-68a904aca7f2)
 
 ChatGPT currently supports `inline` and `fullscreen`, but not `pip`.
 
 ChatGPT uses the `fullscreen` display mode for all entrypoints specified above.
 
-Some model-initiated MCP Apps are more useful to the user when rendered `fullscreen` because they don't scroll off screen as the chat progresses. However, by default, all MCP Apps invoked by the model are displayed inline first.
+For model-invoked MCP Apps, resource metadata lets ChatGPT select a supported display mode before loading the app, avoiding an inline loading state before opening fullscreen.
 
-`_meta["openai/ui"]["availableDisplayModes"]` lets MCP Servers declare which display modes their MCP App supports in resource metadata. Servers that advertise [`appCapabilities.availableDisplayModes`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#declaring-support) SHOULD also set this field so ChatGPT can render the app in a supported display mode before initialization, giving users faster visual feedback.
-
-`_meta["openai/ui"]["preferredDisplayMode"]` is an extension that allows MCP Servers to indicate which `displayMode` the MCP App would prefer to be rendered with first.
-
-### Behavior Details
-
-- When omitted, `availableDisplayModes` defaults to `[preferredDisplayMode]` if a preference is provided, otherwise `[inline, fullscreen]`.
-- When resource metadata omits both display-mode fields, ChatGPT uses `appCapabilities.availableDisplayModes` after initialization.
-- `preferredDisplayMode` is a hint to ChatGPT. ChatGPT MAY respect this setting.
+For model-invoked apps, `_meta["openai/ui"].availableDisplayModes` on the UI resource content item declares supported modes before initialization. This supplements the [`appCapabilities.availableDisplayModes`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#declaring-support) declaration during initialization, which apps retain to constrain supported modes for an individual app instance.
 
 ### Schema
 
@@ -884,9 +889,18 @@ interface DisplayModes {
 }
 ```
 
+### Behavior Details
+
+The following rules apply to model-invoked MCP Apps:
+
+- Supported modes are the intersection of ChatGPT's supported modes, resource `availableDisplayModes` when present, and initialized `appCapabilities.availableDisplayModes` when present. If neither declaration is present, ChatGPT supports `[inline, fullscreen]`. If there is no common mode, ChatGPT retains its current mode when the host supports it, otherwise selects a host-supported preference or default, and reports the fallback as the sole available mode.
+- `preferredDisplayMode` is a hint independent of mode support. It does not add a supported mode. ChatGPT recognizes supported `inline` and `fullscreen` preferences.
+- ChatGPT selects a supported `preferredDisplayMode` first. Otherwise, it selects `fullscreen` if the resource explicitly lists it and it remains supported, then `inline` if supported, then another supported mode. Omitting both resource fields preserves the default to `inline` when supported.
+- Refreshing resource metadata preserves the user's current display mode while that mode remains supported.
+
 ### Examples
 
-Content item in a `resources/read` result:
+`resources/read` content item that opens fullscreen by default:
 
 ```json
 {
@@ -895,7 +909,6 @@ Content item in a `resources/read` result:
   "text": "<!doctype html><html>...</html>",
   "_meta": {
     "openai/ui": {
-      "preferredDisplayMode": "fullscreen",
       "availableDisplayModes": ["inline", "fullscreen"]
     }
   }
@@ -906,7 +919,7 @@ Content item in a `resources/read` result:
 
 Onboarding provides a setup skill for users to run after installation. Setup invokes the onboarding skill in a new conversation, or in the existing thread if the plugin was installed during a conversation.
 
-![Plugin onboarding](resources/12-plugin-onboarding.png)
+![Plugin onboarding](https://github.com/user-attachments/assets/1d6a3041-30a0-4574-8e7d-8a6f84620291)
 
 ### Behavior Details
 
@@ -932,7 +945,7 @@ Manifest:
 
 This extension clarifies and extends the behavior of `ui/update-model-context`.
 
-![Text, resource link, embedded resource, and image in the model context popover](resources/08-model-context-attachments.png)
+![Text, resource link, embedded resource, and image in the model context popover](https://github.com/user-attachments/assets/c8416a03-bf28-45a2-b08a-4ee36412db94)
 
 ### Capability Advertisement
 
@@ -962,7 +975,8 @@ MCP App `initialize` result:
 
 ### Behavior Details
 
-- Each [supported content block](#supported-content) appears as an independently removable composer attachment.
+- On web, image content in model context is not yet supported.
+- On Desktop, visible context is grouped in one popover and removed together.
 - Content block `_meta` is excluded from model input.
 - `ui/update-model-context` is idempotent. Each call replaces the model context previously supplied by the same MCP App instance.
 
@@ -972,7 +986,7 @@ Context change notifications provide updates from the host when model context ch
 
 #### Behavior Details
 
-MCP Apps receive their attached context in `hostContext["openai/modelContext"]` on initialization or remount.
+- MCP Apps receive their attached context in `hostContext["openai/modelContext"]` on initialization or remount.
 
 #### Schema
 
@@ -1053,8 +1067,6 @@ Text block in `ui/update-model-context` with a title:
 Thumbnails give text attachments a visual representation of their context.
 
 MCP Apps MAY set `_meta["openai/thumbnail"]` to an `MCP.Icon` on `text` content blocks in `ui/update-model-context`.
-
-A square image of at least 128 × 128 pixels is recommended for thumbnails.
 
 #### Behavior Details
 
@@ -1160,6 +1172,7 @@ This extension adds metadata to [`ui/message`](https://github.com/modelcontextpr
 
 - Defaults when undefined: `{ target: "active", send: true }`.
 - On iOS and Android, only `{ target: "active", send: true }` is supported.
+- On desktop and the Work browser, `send: false` MUST append content to the active draft or open a fresh editable draft when `target: "new"`, without submitting it.
 
 #### Schema
 
@@ -1177,11 +1190,11 @@ type MessageOptions =
       /** Which conversation receives the content. */
       target: "new";
       /** Whether to send the content immediately. */
-      send?: true;
+      send?: boolean;
     }
   | {
       target?: "active";
-      send?: true;
+      send?: boolean;
     };
 ```
 
@@ -1205,6 +1218,31 @@ Request sending a message to a new conversation:
     "_meta": {
       "openai/message": {
         "target": "new"
+      }
+    }
+  }
+}
+```
+
+Request opening a new editable draft:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "ui/message",
+  "params": {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "Help me design a bracket."
+      }
+    ],
+    "_meta": {
+      "openai/message": {
+        "target": "new",
+        "send": false
       }
     }
   }
@@ -1276,26 +1314,25 @@ Response:
 
 Normally, users can only at-mention a plugin or MCP Server. The at-mention capability allows your plugin to expose a searchable list of items (people, files, channels, etc.) that the user can mention individually in their prompt.
 
-![CAD Parts Library results in the composer at-mention picker](resources/05-composer-mention.png)
+![CAD Parts Library results in the composer at-mention picker](https://github.com/user-attachments/assets/10a47355-98a7-4550-a170-46e0062e656e)
 
 ### Behavior Details
 
 - The at-mention tool is responsible for handling the at-mention request, which includes a typeahead search query, and returning items for the user to choose from.
 - Returned items may be resource links.
-- Servers MAY indicate an at-mention tool with `_meta["openai/extensions"]["mentions/search"]: {}`.
-- At-mention tools must include `"app"` in `_meta["ui"]["visibility"]`.
+- Servers advertise `openai/mentions: { searchTool: string }` through [server capabilities](#server-capabilities). `searchTool` is the non-blank name of a read-only tool on that server.
+- At-mention tools MUST include `"app"` in `_meta["ui"]["visibility"]`.
+
+> **Deprecated:** `_meta["openai/extensions"]["mentions/search"]: {}` remains supported when the `openai/mentions` capability is absent. Advertise the capability instead.
 
 ### Examples
 
-Tool `_meta` advertising mention search:
+Mention-search capability:
 
 ```json
 {
-  "openai/extensions": {
-    "mentions/search": {}
-  },
-  "ui": {
-    "visibility": ["app"]
+  "extensions": {
+    "openai/mentions": { "searchTool": "cad.mentions" }
   }
 }
 ```
@@ -1354,9 +1391,7 @@ Response:
 
 Extended forms expand on [MCP form elicitation](https://modelcontextprotocol.io/specification/2026-07-28/client/elicitation#form-mode-elicitation-requests) with additional elicitation types and display modes.
 
-**NOTE:** OpenAI-registered MCP servers require MCP `2026-07-28` or later with [multi-round-trip requests (MRTR)](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr) for form elicitation. Direct MCP connections support both legacy and MRTR form elicitation flows.
-
-The examples below use the legacy direct-connection flow: replace `elicitation/create` with `openai/elicitation/create`.
+**NOTE:** OpenAI-registered MCP servers require MCP `2026-07-28` or later with [multi-round-trip requests (MRTR)](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr) for form elicitation. Direct MCP connections still support legacy forms.
 
 ### Capability Advertisement
 
@@ -1383,12 +1418,68 @@ MCP Host `initialize` request (MCP `2025-11-25`):
 
 ### Behavior Details
 
+- On connections that negotiate `2026-07-28` or later, MCP Servers SHOULD use [multi-round-trip elicitation](#multi-round-trip-elicitation).
+- On connections that negotiate an earlier protocol version, MCP Servers MUST use `openai/elicitation/create`.
 - `openai/elicitation/create` is a superset of `elicitation/create`.
 - Forms containing unsupported input types are reported as unsupported. They are not partially displayed.
 
+### Multi-Round-Trip Elicitation
+
+This section extends [multi-round-trip requests](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr) for form elicitation.
+
+#### Behavior Details
+
+- MCP Servers MUST require both `elicitation.form: {}` and `extensions["openai/elicitation"].form: {}` in the request's client capabilities.
+- MCP Servers MUST specify an empty object `requestedSchema` in `elicitation/create` `inputRequests`:
+  - `requestedSchema`: `{ "type": "object", "properties": {} }`.
+- MCP Servers MUST put the `requestedSchema` in `_meta["openai/elicitation"]["requestedSchema"]`:
+- Missing or unsupported schemas will be reported as unsupported without displaying the empty core form.
+
+#### Examples
+
+Multi round-trip `input_required` response (`2026-07-28` or later):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "resultType": "input_required",
+    "inputRequests": {
+      "details": {
+        "method": "elicitation/create",
+        "params": {
+          "mode": "form",
+          "message": "Enter a project code",
+          "requestedSchema": { "type": "object", "properties": {} },
+          "_meta": {
+            "openai/elicitation": {
+              "requestedSchema": {
+                "type": "object",
+                "properties": {
+                  "resource": {
+                    "type": "string",
+                    "format": "uri",
+                    "x-openai-input": {
+                      "type": "resource",
+                      "options": [],
+                      "userOptions": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
 ### Legacy Elicitation Request
 
-`openai/elicitation/create` is a drop-in replacement for `elicitation/create`.
+On legacy connections (`2025-11-25` or older), `openai/elicitation/create` is a drop-in replacement for `elicitation/create`.
 
 #### Examples
 
@@ -1489,7 +1580,7 @@ Titled `const` options support an optional `description`.
 
 Thumbnails allow you to specify an image as the user-visible choice instead of just text.
 
-![Select with thumbnails](resources/14-form-select-thumbnails.png)
+![Select with thumbnails](https://github.com/user-attachments/assets/9d2a6108-d2d9-4c1a-84c4-50189d56a8ee)
 
 #### Behavior Details
 
@@ -1498,7 +1589,6 @@ Thumbnails allow you to specify an image as the user-visible choice instead of j
 - Thumbnails use MCP's [Icon](https://modelcontextprotocol.io/specification/2026-07-28/schema#icon) type.
 - If ANY items for a given property have a thumbnail, ALL items for that property will be rendered with an image UI.
   - Items without a thumbnail will render a fallback image.
-  - Servers that provide images for SOME items in a given property SHOULD provide images for ALL items in that property.
 
 #### Examples
 
@@ -1543,7 +1633,7 @@ Request:
 
 Suggested values let users choose from predefined options or enter free-form text. Array fields support selecting multiple options and adding custom text. The same field constraints apply to suggested and entered values.
 
-![Suggested values and a custom entry in the Bits & Bolts review form](resources/15-form-suggested-values.png)
+![Suggested values and a custom entry in the Bits & Bolts review form](https://github.com/user-attachments/assets/e72af9aa-a231-459d-bc48-ab335ce8eaeb)
 
 #### Behavior Details
 
@@ -1598,7 +1688,7 @@ Elicitation result with suggested and entered values:
 
 Resource selection supports supplied resources, user-added files or directories, or both.
 
-![Resource picker](resources/13-form-resource-picker.png)
+![Resource picker](https://github.com/user-attachments/assets/a06f0e07-66c8-4952-907a-a624cfd8b277)
 
 **Deprecated:** Use `type: "resource"` instead of `type: "file"`. The old value remains supported as an alias.
 
@@ -1607,11 +1697,10 @@ Resource selection supports supplied resources, user-added files or directories,
 - Servers declare resource inputs by adding an `x-openai-input` to a `string` (single-select) or `array` (multi-select) form field.
 - Single-select fields submit a URI string.
 - Multi-select fields submit an array of URI strings.
+- On web, directory selection is unsupported.
 - On web, forms requested through MCP Apps support only explicit resource selection without user uploads.
-
-Implicit selection always allows user uploads. When `userOptions` is omitted, it defaults to `{ kind: "file" }` with no file-type restrictions. Explicit selection shows no upload input when `userOptions` is omitted.
-
-Resource options may include a thumbnail (`_meta["openai/thumbnail"]: MCP.Icon`), a preview (`_meta["openai/preview"]: { target: PreviewTarget }`), or both.
+- Implicit selection always allows user uploads. When `userOptions` is omitted, it defaults to `{ kind: "file" }` with no file-type restrictions. Explicit selection shows no upload input when `userOptions` is omitted.
+- Resource options may include a thumbnail (`_meta["openai/thumbnail"]: MCP.Icon`), a preview (`_meta["openai/preview"]: { target: PreviewTarget }`), or both.
 
 ##### Explicit vs Implicit Selection
 
@@ -1795,7 +1884,7 @@ Previews open expanded details for resource options.
 
 ##### Behavior Details
 
-MCP Servers MAY add `_meta["openai/preview"]: { target: PreviewTarget }` to resource options, with or without a thumbnail.
+- MCP Servers MAY add `_meta["openai/preview"]: { target: PreviewTarget }` to resource options, with or without a thumbnail.
 
 ##### Schema
 

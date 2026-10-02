@@ -1,40 +1,70 @@
-import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type {
-  ServerRequest,
-  ServerNotification,
-} from "@modelcontextprotocol/sdk/types.js";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+  ResourceTemplate,
+  McpServer,
+  InputRequiredResult,
+  ServerContext,
+} from "@modelcontextprotocol/server";
+import type { Icon } from "@modelcontextprotocol/sdk/types.js";
 import {
   createSettings,
   createMentions,
-  OpenAIFileEntrypointInputSchema,
-  getResourcePath,
   type OpenAIFormRequestParams,
 } from "@openai/mcp-extensions/server";
-import { z } from "zod/v4";
 import {
+  OpenAIFileEntrypointInputSchema,
+  getResourcePath,
+  type OpenAIFormResult,
+  type OpenAIUiResourceMetadata,
+} from "@openai/mcp-extensions";
+import { z } from "zod/v4";
+
+import {
+  cadPartMetadataSchema,
   cadPreferencesSchema,
   publicCadPartSchema,
+  type PublicCadPart,
 } from "../shared/contracts.js";
-import { elicitCadForm, type RequestClient } from "./forms.js";
 import type { CatalogStore } from "./store.js";
 
-export type CadServerOptions = {
-  server: McpServer;
-  store: CatalogStore;
+declare const __LOCAL_FILESYSTEM__: boolean;
+
+// The two SDKs share registration APIs; their entrypoints supply resource templates
+// and form handling from the matching SDK.
+export type CadServerOptions<Context = ServerContext> = {
+  server: Pick<McpServer, "registerTool" | "registerResource" | "server">;
+  resourceTemplate: typeof ResourceTemplate;
+  partUriTemplate: string;
+  store: Omit<CatalogStore, "import">;
+  title?: string;
   html: string;
-  iconSvg: string;
+  icons: Icon[];
   formats: string[];
-  requestClient: (
-    context: RequestHandlerExtra<ServerRequest, ServerNotification>,
-  ) => RequestClient;
-  requestMeta?: (
-    context: RequestHandlerExtra<ServerRequest, ServerNotification>,
-  ) => Record<string, unknown> | undefined;
-  wasm?: Uint8Array;
+  elicit: (
+    context: Context,
+    params: OpenAIFormRequestParams,
+  ) =>
+    | OpenAIFormResult
+    | InputRequiredResult
+    | Promise<OpenAIFormResult | InputRequiredResult>;
+  requestMeta: (context: Context) => Record<string, unknown> | undefined;
+  wasm: { blob: string } | { text: string };
+  assetOrigin?: string;
 };
-const result = (data: Record<string, unknown>) => ({
-  content: [],
+export const cadImportSchema = z.object({
+  fileName: z.string(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
+export const cadResult = (data: Record<string, unknown>) => ({
+  content: [
+    {
+      type: "text" as const,
+      text: JSON.stringify(data, (key, value) =>
+        key === "previews" || key === "blob" ? undefined : value,
+      ),
+    },
+  ],
   structuredContent: data,
 });
 const readonly = {
@@ -42,34 +72,49 @@ const readonly = {
   destructiveHint: false,
   openWorldHint: false,
 };
-export function registerCadServer({
+export function registerCadServer<Context = ServerContext>({
   server,
+  resourceTemplate: ResourceTemplate,
+  partUriTemplate,
   store,
+  title = "Bits & Bolts",
   html,
-  iconSvg,
+  icons,
   formats,
-  requestClient,
-  requestMeta = (context) => context._meta,
+  elicit: requestForm,
+  requestMeta,
   wasm,
-}: CadServerOptions) {
-  const UI = "ui://bits-and-bolts/app-v14";
-  const icon = {
-    src: "data:image/svg+xml," + encodeURIComponent(iconSvg),
-    mimeType: "image/svg+xml",
-    sizes: ["any"],
-  };
-  const ui = (entrypoints: unknown[] = []) => ({
-    ui: { resourceUri: UI },
+  assetOrigin,
+}: CadServerOptions<Context>) {
+  const entrypoint = { icons, annotations: readonly };
+  const UI = "ui://bits-and-bolts/global-v35";
+  const THREAD = "ui://bits-and-bolts/thread-v35";
+  const FILE = "ui://bits-and-bolts/file-v35";
+  const WIDGET = "ui://bits-and-bolts/widget-v35";
+  const ui = (entrypoints: unknown[] = [], resourceUri = WIDGET) => ({
+    ui: { resourceUri },
     "openai/ui": { entrypoints },
     "openai/iconStyle": "monochrome",
   });
-  const view = async (data: Record<string, unknown>) =>
-    result({
-      ...data,
-      preferences: await store.readSettings(),
-      settingsLifetime: store.settingsLifetime,
-      localFilesystem: store.importPath != null,
-    });
+  const view = async (
+    data: Record<string, unknown> & { part?: PublicCadPart },
+  ) => {
+    return {
+      ...cadResult({
+        ...data,
+        ...(data.part ? { part: cadPartMetadataSchema.parse(data.part) } : {}),
+        preferences: await store.readSettings(),
+        settingsLifetime: store.settingsLifetime,
+        ...(assetOrigin
+          ? { uploadUrl: `${assetOrigin}/bits-and-bolts/upload` }
+          : {}),
+        localFilesystem: __LOCAL_FILESYSTEM__ && store.importPath != null,
+      }),
+      ...(data.part
+        ? { _meta: { previews: { isometric: data.part.previews.isometric } } }
+        : {}),
+    };
+  };
   const find = async (id: string) => {
     const part = await store.get(id);
     if (!part) throw Error("Unknown part: " + id);
@@ -82,35 +127,42 @@ export function registerCadServer({
         .toLowerCase()
         .includes(query.trim().toLowerCase()),
     );
-  const registered = new Set<string>();
-  function registerPart(id: string, uri: string, name: string) {
-    if (registered.has(id)) return;
-    registered.add(id);
-    server.registerResource(
-      id,
-      uri,
-      { title: name, mimeType: "text/markdown" },
-      async () => {
-        const part = await find(id);
-        return {
-          contents: [
-            {
-              uri,
-              mimeType: "text/markdown",
-              text:
-                "# " +
-                part.name +
-                "\n\n" +
-                part.description +
-                "\n\nTags: " +
-                part.tags.join(", "),
-            },
-          ],
-        };
-      },
-    );
-  }
-  const settings = createSettings(server);
+  server.registerResource(
+    "cad-part",
+    new ResourceTemplate(partUriTemplate, {
+      list: async () => ({
+        resources: (await store.list()).map((part) => ({
+          uri: part.resourceUri,
+          name: part.id,
+          title: part.name,
+          mimeType: "text/markdown",
+        })),
+      }),
+    }),
+    { mimeType: "text/markdown" },
+    async (uri, { id }) => {
+      if (typeof id !== "string") throw Error("Invalid part ID.");
+      const part = await find(id);
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: "text/markdown",
+            text:
+              "# " +
+              part.name +
+              "\n\n" +
+              part.description +
+              "\n\nTags: " +
+              part.tags.join(", "),
+          },
+        ],
+      };
+    },
+  );
+  const settings = createSettings(
+    server as unknown as Parameters<typeof createSettings>[0],
+  );
   settings.register({
     fields: {
       units: { schema: cadPreferencesSchema.shape.units, title: "Units" },
@@ -120,7 +172,7 @@ export function registerCadServer({
       },
       defaultView: {
         schema: cadPreferencesSchema.shape.defaultView,
-        title: "Default camera",
+        title: "Default view",
       },
     },
     layout: [
@@ -135,19 +187,15 @@ export function registerCadServer({
         items: [
           { kind: "property", property: "showGrid" },
           { kind: "property", property: "defaultView" },
-          {
-            kind: "tool",
-            tool: "cad.settings",
-            title: "Viewer controls",
-            description: "Open the custom viewer settings",
-          },
         ],
       },
     ],
     read: () => store.readSettings(),
     update: (set) => store.updateSettings(set),
   });
-  createMentions(server).setHandler(async ({ query }) => ({
+  createMentions(
+    server as unknown as Parameters<typeof createMentions>[0],
+  ).setHandler(async ({ query }) => ({
     items: (await matching(query)).slice(0, 30).map((part) => ({
       type: "resource_link" as const,
       uri: part.resourceUri,
@@ -157,55 +205,73 @@ export function registerCadServer({
     })),
   }));
   server.registerTool(
+    "cad.browse",
+    {
+      title,
+      description: "Open the full Parts Library.",
+      inputSchema: z.object({}),
+      ...entrypoint,
+      _meta: {
+        ...ui(
+          [
+            {
+              type: "global",
+              quickAction: {
+                title: "Choose a part",
+                icons,
+                target: {
+                  type: "tool",
+                  name: "cad.pickFile",
+                  arguments: {},
+                },
+              },
+            },
+          ],
+          UI,
+        ),
+        ui: { resourceUri: UI, visibility: ["app"] },
+      },
+    },
+    async () => view({ page: "library" }),
+  );
+  server.registerTool(
     "cad.library",
     {
-      title: "Bits & Bolts",
-      description: "Browse the CAD catalog and inspect a part.",
+      title,
+      description: "Browse and inspect CAD parts in the library.",
       inputSchema: z.object({}),
       annotations: readonly,
-      _meta: ui([
-        {
-          type: "global",
-          quickAction: {
-            title: "Part reference",
-            icons: [icon],
-            target: { type: "tool", name: "cad.reference", arguments: {} },
-          },
-        },
-      ]),
+      _meta: ui([], THREAD),
     },
-    async () => view({ page: "library", parts: await store.list() }),
+    async () => view({ page: "library" }),
   );
   server.registerTool(
     "cad.tray",
     {
-      title: "Bits & Bolts",
+      title: "Parts Tray",
       description: "Open the parts library beside this conversation.",
       inputSchema: z.object({}),
-      annotations: readonly,
-      _meta: ui([{ type: "thread" }]),
+      ...entrypoint,
+      _meta: ui([{ type: "thread" }], THREAD),
     },
-    async () => view({ page: "library", parts: await store.list() }),
+    async () => view({ page: "library" }),
   );
   server.registerTool(
     "cad.listParts",
     {
       title: "List CAD parts",
+      description: "List all CAD parts in the library.",
       inputSchema: z.object({}),
       annotations: readonly,
       _meta: { ui: { visibility: ["app"] } },
     },
-    async () => view({ parts: await store.list() }),
-  );
-  server.registerTool(
-    "cad.settings",
-    {
-      title: "Viewer settings",
-      inputSchema: z.object({}),
-      annotations: readonly,
-      _meta: ui([{ type: "settings" }]),
-    },
-    async () => view({ page: "settings", parts: await store.list() }),
+    async () =>
+      cadResult({
+        parts: (await store.list()).map((part) => ({
+          ...part,
+          previews: { isometric: part.previews.isometric },
+        })),
+      }),
   );
   server.registerTool(
     "cad.search",
@@ -213,28 +279,33 @@ export function registerCadServer({
       title: "Search CAD parts",
       description: "Find CAD parts in the library.",
       inputSchema: z.object({ query: z.string().default("") }),
-      outputSchema: z.object({ parts: z.array(publicCadPartSchema) }),
+      outputSchema: z.object({ parts: z.array(cadPartMetadataSchema) }),
       annotations: readonly,
     },
-    async ({ query }) => result({ parts: await matching(query) }),
+    async ({ query }) =>
+      cadResult({
+        parts: (await matching(query)).map((part) =>
+          cadPartMetadataSchema.parse(part),
+        ),
+      }),
   );
   server.registerTool(
     "cad.view",
     {
       title: "Open CAD part",
+      description:
+        "Show a library part inline in the 3D viewer, with an option to browse the full library.",
       inputSchema: z.object({ partId: z.string() }),
       annotations: readonly,
       _meta: ui(),
     },
-    async ({ partId }) =>
-      view({ part: await find(partId), parts: await store.list() }),
+    async ({ partId }) => view({ part: await find(partId) }),
   );
   server.registerTool(
     "cad.configureView",
     {
       title: "Configure CAD view",
-      description:
-        "Open a part with a camera and render mode. Use mounted app tools to edit an existing view.",
+      description: "Open a CAD part with the chosen camera and render mode.",
       inputSchema: z.object({
         partId: z.string(),
         camera: z.enum(["isometric", "front", "top"]).optional(),
@@ -244,17 +315,19 @@ export function registerCadServer({
       _meta: ui(),
     },
     async ({ partId, ...config }) =>
-      view({ part: await find(partId), parts: await store.list(), ...config }),
+      view({ part: await find(partId), ...config }),
   );
   server.registerTool(
     "cad.open",
     {
       title: "Bits & Bolts CAD viewer",
+      description: "Open a CAD file in the 3D viewer.",
       inputSchema: OpenAIFileEntrypointInputSchema,
-      annotations: readonly,
-      _meta: ui([
-        { type: "file", extensions: formats.map((format) => "." + format) },
-      ]),
+      ...entrypoint,
+      _meta: ui(
+        [{ type: "file", extensions: formats.map((format) => "." + format) }],
+        FILE,
+      ),
     },
     async ({ file }) => view({ file }),
   );
@@ -262,6 +335,7 @@ export function registerCadServer({
     "cad.readPart",
     {
       title: "Read CAD part",
+      description: "Read a library part in its source or display format.",
       inputSchema: z.object({
         partId: z.string(),
         representation: z.enum(["source", "display"]).default("source"),
@@ -270,31 +344,18 @@ export function registerCadServer({
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ partId, representation }) =>
-      result(await store.read(partId, representation)),
-  );
-  server.registerTool(
-    "cad.importPart",
-    {
-      title: "Add CAD file",
-      inputSchema: z.object({
-        blob: z.string(),
-        fileName: z.string(),
-        name: z.string().optional(),
-        description: z.string().optional(),
-        tags: z.array(z.string()).optional(),
-      }),
-      _meta: { ui: { visibility: ["app"] } },
-    },
-    async (input) => {
-      const part = await store.import(input);
-      registerPart(part.id, part.resourceUri, part.name);
-      return result({ part });
-    },
+      cadResult(await store.read(partId, representation)),
   );
   server.registerTool(
     "cad.savePreviews",
     {
       title: "Save CAD previews",
+      description: "Save preview images for a library part.",
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        openWorldHint: false,
+      },
       inputSchema: z.object({
         partId: z.string(),
         previews: publicCadPartSchema.shape.previews,
@@ -302,9 +363,9 @@ export function registerCadServer({
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ partId, previews }) =>
-      result({ part: await store.savePreviews(partId, previews) }),
+      cadResult({ part: await store.savePreviews(partId, previews) }),
   );
-  if (store.localPath)
+  if (__LOCAL_FILESYSTEM__ && store.localPath)
     server.registerTool(
       "cad.partPath",
       {
@@ -313,9 +374,9 @@ export function registerCadServer({
         annotations: readonly,
         _meta: { ui: { visibility: ["app"] } },
       },
-      async ({ partId }) => result({ path: await store.localPath!(partId) }),
+      async ({ partId }) => cadResult({ path: await store.localPath!(partId) }),
     );
-  if (store.importPath)
+  if (__LOCAL_FILESYSTEM__ && store.importPath)
     server.registerTool(
       "cad.addOpenFile",
       {
@@ -324,20 +385,21 @@ export function registerCadServer({
         _meta: { ui: { visibility: ["app"] } },
       },
       async ({ fileName }, context) => {
-        const path = getResourcePath(requestMeta(context));
+        const path = getResourcePath(
+          requestMeta(context as unknown as Context),
+        );
         if (!path)
           throw Error("The host did not provide a trusted CAD source path.");
         const part = await store.importPath!(path, fileName);
-        registerPart(part.id, part.resourceUri, part.name);
-        return result({ part });
+        return cadResult({ part });
       },
     );
   const elicit = (
-    context: RequestHandlerExtra<ServerRequest, ServerNotification>,
+    context: ServerContext,
     message: string,
     requestedSchema: OpenAIFormRequestParams["requestedSchema"],
   ) =>
-    elicitCadForm(requestClient(context), {
+    requestForm(context as unknown as Context, {
       mode: "form",
       message,
       requestedSchema,
@@ -346,27 +408,27 @@ export function registerCadServer({
     "cad.reference",
     {
       title: "Part reference",
+      description: "Show names and descriptions of library parts in a dialog.",
       inputSchema: z.object({}),
       annotations: readonly,
       _meta: { ui: { visibility: ["app"] } },
     },
-    async (_args, context) =>
-      result(
-        await elicit(
-          context,
-          (await store.list())
-            .map((p) => p.name + ": " + p.description)
-            .join("\n\n"),
-          { type: "object", properties: {} },
-        ),
-      ),
+    async (_args, context) => {
+      const form = await elicit(
+        context,
+        (await store.list())
+          .map((p) => p.name + ": " + p.description)
+          .join("\n\n"),
+        { type: "object", properties: {} },
+      );
+      return "resultType" in form ? form : cadResult(form);
+    },
   );
   server.registerTool(
     "cad.pickFile",
     {
       title: "Choose CAD part",
-      description:
-        "Show image previews when the user asks to pick or choose a CAD part.",
+      description: "Choose a CAD part using thumbnails.",
       inputSchema: z.object({}),
       annotations: readonly,
       _meta: ui(),
@@ -383,14 +445,11 @@ export function registerCadServer({
             oneOf: parts.map((part) => ({
               const: part.id,
               title: part.name,
+              description: part.description,
               ...(part.previews.isometric
                 ? {
                     "x-openai-thumbnail": {
                       src: part.previews.isometric,
-                      mimeType: part.previews.isometric.slice(
-                        5,
-                        part.previews.isometric.indexOf(";"),
-                      ),
                     },
                   }
                 : {}),
@@ -398,14 +457,18 @@ export function registerCadServer({
           },
         },
       });
-      if (form.action !== "accept") return result({ selection: form.action });
-      return view({ part: await find(String(form.content.part)), parts });
+      if ("resultType" in form) return form;
+      if (form.action !== "accept")
+        return cadResult({ selection: form.action });
+      return view({ part: await find(String(form.content.part)) });
     },
   );
   server.registerTool(
     "cad.pickReferences",
     {
       title: "Choose CAD references",
+      description:
+        "Choose CAD references from the library or your files and folders.",
       inputSchema: z.object({
         selection: z.enum(["single", "explicit", "implicit"]).default("single"),
         kind: z.enum(["file", "directory"]).default("file"),
@@ -427,60 +490,106 @@ export function registerCadServer({
             uri: p.resourceUri,
             name: p.fileName,
             title: p.name,
+            description: p.description,
+            _meta: {
+              ...(p.previews.isometric
+                ? { "openai/thumbnail": { src: p.previews.isometric } }
+                : {}),
+              "openai/preview": {
+                target: {
+                  type: "resource_link",
+                  uri: p.resourceUri,
+                  name: p.fileName,
+                  mimeType: "text/markdown",
+                },
+              },
+            },
           })),
           userOptions:
             kind === "file"
               ? { kind, accept: formats.map((format) => "." + format) }
               : { kind },
         },
-        ...(selection === "implicit" || !parts.length
-          ? {}
-          : {
-              default: multiple ? [parts[0].resourceUri] : parts[0].resourceUri,
-            }),
       };
       const form = await elicit(context, "Choose CAD references", {
         type: "object",
         required: ["references"],
         properties: { references: field },
       } as OpenAIFormRequestParams["requestedSchema"]);
+      if ("resultType" in form) return form;
       return form.action === "accept"
-        ? result({
+        ? cadResult({
             selection: "accept",
             uris: Array.isArray(form.content.references)
               ? form.content.references
               : [form.content.references],
           })
-        : result({ selection: form.action });
+        : cadResult({ selection: form.action });
     },
   );
   server.registerTool(
     "cad.reviewForm",
     {
-      title: "CAD review form",
-      description:
-        "Demonstrate text patterns, enum, boolean and numeric input in a review form.",
-      inputSchema: z.object({}),
+      title: "Review part requirements",
+      description: "Collect part review requirements for discussion in chat.",
+      inputSchema: z.object({ partId: z.string().optional() }),
       annotations: readonly,
     },
-    async (_args, context) =>
-      result(
-        await elicit(context, "Review a CAD reference", {
+    async ({ partId }, context) => {
+      const part = partId == null ? null : await find(partId);
+      const form = await elicit(
+        context,
+        part ? `Review ${part.name}` : "Review a CAD reference",
+        {
           type: "object",
           required: ["reference", "priority", "approved", "tolerance"],
           properties: {
             reference: {
               type: "string",
-              title: "CAD or file URI",
+              title: "Part reference",
               format: "uri",
-              pattern: "^(cad|file):",
+              pattern: "^(mcp|cad|file):",
+              ...(part ? { default: part.resourceUri } : {}),
             },
             priority: {
               type: "string",
               title: "Priority",
               enum: ["low", "normal", "high"],
             },
-            approved: { type: "boolean", title: "Approved" },
+            purpose: {
+              type: "string",
+              title: "Purpose",
+              minLength: 1,
+              "x-openai-suggestions": [
+                { const: "prototype", title: "Prototype" },
+              ],
+            },
+            checks: {
+              type: "array",
+              title: "Checks",
+              items: {
+                type: "string",
+                minLength: 1,
+                "x-openai-suggestions": [
+                  {
+                    const: "clearance",
+                    title: "Clearance",
+                    description: "Check spacing between assembled parts.",
+                  },
+                  {
+                    const: "dimensions",
+                    title: "Dimensions",
+                    description: "Verify the overall size and tolerances.",
+                  },
+                  {
+                    const: "printability",
+                    title: "Printability",
+                    description: "Review the shape for 3D printing.",
+                  },
+                ],
+              },
+            },
+            approved: { type: "boolean", title: "Ready for review" },
             tolerance: {
               type: "number",
               title: "Tolerance (mm)",
@@ -488,55 +597,82 @@ export function registerCadServer({
               maximum: 10,
             },
           },
-        }),
-      ),
+        },
+      );
+      return "resultType" in form ? form : cadResult(form);
+    },
   );
-  server.registerResource(
-    "bits-and-bolts",
-    UI,
-    { title: "Bits & Bolts", mimeType: "text/html;profile=mcp-app" },
-    async () => ({
+  const readUi = async (uri: URL, surface: string) => {
+    const preferredDisplayMode = surface === "thread" ? "fullscreen" : "inline";
+    return {
       contents: [
         {
-          uri: UI,
+          uri: uri.href,
           mimeType: "text/html;profile=mcp-app",
-          text: html,
+          text: html.replace("<html", `<html data-surface="${surface}"`),
           _meta: {
             "openai/ui": {
-              preferredDisplayMode: "inline",
-              availableDisplayModes: ["inline", "fullscreen"],
-            },
+              preferredDisplayMode,
+              availableDisplayModes:
+                surface === "widget"
+                  ? ["inline", "fullscreen"]
+                  : [preferredDisplayMode],
+            } satisfies OpenAIUiResourceMetadata,
+            ...(assetOrigin
+              ? {
+                  "openai/widgetCSP": {
+                    connect_domains: [assetOrigin],
+                    resource_domains: [assetOrigin],
+                  },
+                }
+              : {}),
             ui: {
               prefersBorder: true,
-              csp: { connectDomains: [], resourceDomains: [] },
+              csp: {
+                connectDomains: assetOrigin ? [assetOrigin] : [],
+                resourceDomains: assetOrigin ? [assetOrigin] : [],
+              },
             },
           },
         },
       ],
+    };
+  };
+  for (const [surface, resourceUri] of [
+    ["global", UI],
+    ["thread", THREAD],
+    ["file", FILE],
+    ["widget", WIDGET],
+  ]) {
+    server.registerResource(
+      `bits-and-bolts-${surface}`,
+      resourceUri,
+      { title, mimeType: "text/html;profile=mcp-app" },
+      (uri) => readUi(uri, surface),
+    );
+    // Published app metadata still points to the v32 resources.
+    const publishedUri = `ui://bits-and-bolts/${surface}-v32`;
+    if (resourceUri !== publishedUri) {
+      server.registerResource(
+        `bits-and-bolts-${surface}-v32`,
+        publishedUri,
+        { title, mimeType: "text/html;profile=mcp-app" },
+        (uri) => readUi(uri, surface),
+      );
+    }
+  }
+  server.registerResource(
+    "occt-wasm",
+    "cad-resource://bits-and-bolts/occt-import-js.wasm",
+    { title: "OpenCascade STEP importer", mimeType: "application/wasm" },
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "application/wasm",
+          ...wasm,
+        },
+      ],
     }),
   );
-  if (wasm)
-    server.registerResource(
-      "occt-wasm",
-      "cad-resource://bits-and-bolts/occt-import-js.wasm",
-      { title: "OpenCascade STEP importer", mimeType: "application/wasm" },
-      async (uri) => ({
-        contents: [
-          {
-            uri: uri.href,
-            mimeType: "application/wasm",
-            blob: bytesToBase64(wasm),
-          },
-        ],
-      }),
-    );
-  return store.list().then((parts) => {
-    for (const part of parts)
-      registerPart(part.id, part.resourceUri, part.name);
-  });
-}
-function bytesToBase64(bytes: Uint8Array) {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
 }

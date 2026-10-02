@@ -12,3 +12,6 @@ build/
 .env.*
 .DS_Store
 python/uv.lock
+
+.test-build/
+.pytest_cache/

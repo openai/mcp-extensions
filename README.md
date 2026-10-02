@@ -2,9 +2,14 @@
 
 OpenAI MCP Extensions adds ChatGPT-specific capabilities to MCP so developers can build plugins that feel like native, first-class features.
 
-## Showcase
+## Try it out
 
-All examples below use the Bits & Bolts plugin, which you can try by [installing the plugin](#0-try-it-out).
+1. Install [Bits & Bolts Remote](https://chatgpt.com/plugins/plugin_asdk_app_6abadab6e7d881919e7491d52c7846e8).
+2. Select the **Bits & Bolts** icon in the sidebar to open the **Parts Library**.
+
+   ![Bits & Bolts Remote selected in the sidebar with the Parts Library open](resources/01-global-library.png)
+
+## Showcase
 
 ### [Sidebar entrypoints](docs/spec.md#mcp-app-entrypoints)
 
@@ -32,29 +37,23 @@ Let users select a CAD part using thumbnail choices.
 
 ## Get started
 
-### 0. Try it out
-
-Install the Bits & Bolts Remote plugin:
-
-1. Install [Bits & Bolts Remote from the plugin directory](https://chatgpt.com/plugins/plugin_asdk_app_6abadab6e7d881919e7491d52c7846e8).
-2. Select **Bits & Bolts Remote** in the sidebar to open the **Parts Library**.
-
-   ![Bits & Bolts Remote selected in the sidebar with the Parts Library open](resources/01-global-library.png)
-
-### 1. Create a plugin
-
-Read the [plugin documentation](https://developers.openai.com/codex/build-plugins) about how to create a plugin. Once you have a plugin…
-
-### 2. Add the SDKs to your MCP server
-
-Follow the SDK installation instructions for the current source:
+### 1. Add the SDKs
 
 - [TypeScript](typescript/README.md#installation): `@openai/mcp-extensions` for MCP servers and Apps.
 - [Python](python/README.md#installation): `openai-mcp-extensions` for MCP servers.
 
+### 2. Integrate extensions
+
+Use [Plugin Creator](https://chatgpt.com/plugins/plugin_connector_1p_e1a10c53223481918a42f1510ec46c1e) and ask it about workflows you want in your plugin and how extensions can close those gaps.
+
 ### 3. Explore supported extensions
 
-Read the [spec](docs/spec.md) to learn more about supported extensions.
+- [docs/spec.md](docs/spec.md) lists all supported extensions.
+- [docs/patterns.md](docs/patterns.md) covers best practices.
+
+### 4. Propose an extension
+
+Help us help you build better extensions by [submitting an extension proposal](https://github.com/openai/mcp-extensions/issues/new?template=extension-proposal.md).
 
 ## License
 

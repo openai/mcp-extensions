@@ -4,6 +4,10 @@
   "description": "OpenAI extensions for MCP servers and apps.",
   "type": "module",
   "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
     "./app": {
       "types": "./dist/app/index.d.ts",
       "import": "./dist/app/index.js"
@@ -22,16 +26,19 @@
     "*.css"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/package.mjs",
     "types": "tsc --noEmit",
     "prepack": "pnpm run build",
-    "package:check": "publint"
+    "package:check": "publint",
+    "test": "tsc -p tsconfig.test.json && node --test .test-build/tests/*.test.js",
+    "test:package": "pnpm run build && node scripts/package-smoke.mjs"
   },
   "dependencies": {
-    "zod": "4.4.3",
-    "@cfworker/json-schema": "^4.1.1"
+    "@cfworker/json-schema": "^4.1.1",
+    "zod": "4.4.3"
   },
   "peerDependencies": {
+    "@modelcontextprotocol/server": "^2.0.0",
     "@modelcontextprotocol/ext-apps": "^1.7.5",
     "@modelcontextprotocol/sdk": "^1.29.0"
   },
@@ -56,7 +63,9 @@
   ],
   "devDependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.5",
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "@modelcontextprotocol/client": "^2.0.0"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

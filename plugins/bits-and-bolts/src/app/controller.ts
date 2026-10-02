@@ -1,14 +1,22 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- The demo handles dynamic JSON-RPC payloads and DOM controls. */
-import { renderCadPreviews } from "./shared/preview.js";
-import type { ModelFormat } from "../shared/contracts.js";
-import { createAppTransport } from "@openai/mcp-extensions/app/transport";
-import type { PublicCadPart } from "../shared/contracts.js";
-import type {
-  Renderer,
-  RendererOptions,
-  RenderState,
-  ModelSource,
-} from "./renderers/types.js";
+import { createRenderer } from "./renderers/three.js";
+import { createLibrary, filterParts } from "./library.js";
+import { App } from "@modelcontextprotocol/ext-apps";
+import { z } from "zod/v4";
+import {
+  OpenAIExtensions,
+  type OpenAIModelContextHostState,
+  type OpenAIDeepLinkHostState,
+} from "@openai/mcp-extensions/app";
+import {
+  partSourceResultSchema,
+  previewImagesSchema,
+  publicCadPartSchema,
+  type CadPartMetadata,
+  type PublicCadPart,
+  type CadPreferences,
+} from "../shared/contracts.js";
+import type { RenderState, ModelSource } from "./renderers/types.js";
+import type { ContentBlock } from "@modelcontextprotocol/sdk/types.js";
 type FileInfo = { name: string; resourceUri: string };
 type AppState = RenderState & {
   part: PublicCadPart | null;
@@ -16,23 +24,49 @@ type AppState = RenderState & {
   etag: string | null;
   writable: boolean;
   dirty: boolean;
-  page: string;
+  page: "library" | "viewer";
   defaultView: string;
-  capabilities: Record<string, any>;
-  host: Record<string, any>;
+  capabilities: NonNullable<ReturnType<App["getHostCapabilities"]>>;
+  host: NonNullable<ReturnType<App["getHostContext"]>>;
   connected: boolean;
   subscription: string | null;
-  syncedSettings?: boolean;
 };
-export function startApp(
-  createRenderer: (options: RendererOptions) => Renderer,
-) {
+export function startApp() {
   let catalog: PublicCadPart[] = [];
+  let catalogLoaded = false;
+  let catalogError = false;
+  let catalogRequest: Promise<void> | undefined;
+  let catalogRevision = 0;
+  let catalogTimer: ReturnType<typeof setTimeout> | undefined;
+  const surface = document.documentElement.dataset.surface;
+  const canShare = () =>
+    ["widget", "thread", "global"].includes(surface || "") &&
+    openai.modelContext != null;
+  const canShareAllTypes = () =>
+    canShare() &&
+    !!state.part?.resourceUri &&
+    state.capabilities.updateModelContext?.resourceLink != null &&
+    state.capabilities.updateModelContext?.resource != null;
+  let initialToolResultPending = true;
   let importedSource: ModelSource | null = null;
+  let importPending = false;
   let localFilesystem = false;
-  let previewTask: Promise<void> | undefined;
-  let disposed = false;
-  const $ = (id: string): any => document.getElementById(id);
+  let uploadUrl: string | undefined;
+  type ElementFor<Id extends string> = Id extends "camera" | "mode"
+    ? HTMLSelectElement
+    : Id extends "search" | "import"
+      ? HTMLInputElement
+      : Id extends "view-preview"
+        ? HTMLImageElement
+        : Id extends "part-tools"
+          ? HTMLDetailsElement
+          : Id extends "unsaved-dialog"
+            ? HTMLDialogElement
+            : Id extends "add-library" | "save" | "share"
+              ? HTMLButtonElement
+              : HTMLElement;
+  const $ = <Id extends string>(id: Id) =>
+    document.getElementById(id) as ElementFor<Id>;
   const state: AppState = {
     part: null,
     file: null,
@@ -41,11 +75,19 @@ export function startApp(
     dirty: false,
     page: "library",
     defaultView: "isometric",
-    camera: "isometric",
-    mode: "edges",
-    yaw: -0.6,
-    pitch: 0.6,
-    zoom: 1,
+    get camera(): string {
+      return renderer.camera()?.camera ?? state.defaultView;
+    },
+    mode: "solid",
+    get yaw(): number {
+      return renderer.camera()?.yaw ?? -0.6;
+    },
+    get pitch(): number {
+      return renderer.camera()?.pitch ?? 0.6;
+    },
+    get zoom(): number {
+      return renderer.camera()?.zoom ?? 1;
+    },
     units: "mm",
     grid: true,
     host: {},
@@ -53,42 +95,72 @@ export function startApp(
     connected: false,
     subscription: null,
   };
-  const transport = createAppTransport<Record<string, any>>();
+  const app = new App(
+    { name: "bits-and-bolts", version: "0.1.0" },
+    { tools: {} },
+    { autoResize: false },
+  );
+  const openai = new OpenAIExtensions(app);
   let generation = 0,
     readSequence = 0,
     editSequence = 0;
   let contextTimer: ReturnType<typeof setTimeout> | undefined;
   let resizing: number | undefined;
-  let initialDeepLink: { url?: string } | null = null;
+  let pendingDeepLink: { url?: string } | null = null;
+  let selectedParts: ContentBlock[] = [];
+  let contextPending = false;
+  let contextQueued = false;
+  let attachedView: ContentBlock | undefined;
+  let exampleContext: ContentBlock[] = [];
+  let viewPreviewTimer: ReturnType<typeof setTimeout> | undefined;
+  let viewPreviewKey = "";
   const status = (message: string) => {
     $("status").textContent = message;
-  };
-  const request = (method: string, params: Record<string, any> = {}) =>
-    transport.request(
-      method,
-      params,
-      ["ui/message", "ui/download-file"].includes(method) ? 300000 : 15000,
-    );
-  const notify = (method: string, params: Record<string, any> = {}) => {
-    if (state.connected) transport.notify(method, params);
   };
   const renderer = createRenderer({
     container: $("viewport"),
     onChange(change) {
       Object.assign(state, change);
       $("camera").value = state.camera;
-      $("selection").textContent = state.selection
-        ? "Selected surface: " + JSON.stringify(state.selection)
-        : "";
+      $("selection").textContent = state.selection ? "Point selected" : "";
       queueContext();
     },
     async readWasm() {
-      const response = await request("resources/read", {
+      const response = await app.readServerResource({
         uri: "cad-resource://bits-and-bolts/occt-import-js.wasm",
       });
       const content = response.contents?.[0];
-      if (!content?.blob) throw Error("The STEP importer is unavailable.");
+      if (content && "text" in content && /^https?:\/\//.test(content.text)) {
+        const download = await fetch(content.text);
+        if (!download.ok) throw Error("The STEP importer is unavailable.");
+        return new Uint8Array(await download.arrayBuffer());
+      }
+      if (!content || !("blob" in content))
+        throw Error("The STEP importer is unavailable.");
       return Uint8Array.from(atob(content.blob), (c) => c.charCodeAt(0));
+    },
+  });
+  const library = createLibrary({
+    openPart: (part) => openPart(part).catch(fail),
+    isSelected: (partId) =>
+      selectedParts.some(
+        (block) => block._meta?.["bits-and-bolts/partId"] === partId,
+      ),
+    showSelection: canShare,
+    canSelect: () => !contextPending && canShare(),
+    toggleSelection: (part) => togglePart(part).catch(fail),
+    async loadPreviews(part) {
+      if (!["stl", "3mf"].includes(part.format)) return;
+      const source = await readPart(part);
+      const previews = await renderer.previews(source.format, source.bytes);
+      // Display the preview even if persistence is unavailable in this host.
+      void app
+        .callServerTool({
+          name: "cad.savePreviews",
+          arguments: { partId: part.id, previews },
+        })
+        .catch(() => {});
+      return previews;
     },
   });
   for (const [id, values] of [
@@ -112,24 +184,25 @@ export function startApp(
         ),
       );
   }
+  $("mode").value = state.mode;
   $("import").accept = renderer.formats.map((format) => "." + format).join(",");
   function fail(error: unknown) {
     status(error instanceof Error ? error.message : String(error));
+    $("status").scrollIntoView({ block: "nearest" });
   }
   const act =
-    (fn: (...args: any[]) => any) =>
-    (...args: any[]) =>
+    <Args extends unknown[]>(fn: (...args: Args) => unknown) =>
+    (...args: Args) =>
       Promise.resolve()
         .then(() => fn(...args))
         .catch(fail);
 
   function draw() {
-    renderer.draw(state);
     $("open-source").hidden = !(
       localFilesystem &&
       state.part?.id !== "imported" &&
       state.part &&
-      state.capabilities.experimental?.["openai/files"] != null
+      openai.files != null
     );
     const unit = state.units === "in" ? 25.4 : 1;
     $("dimensions").textContent = renderer.triangleCount()
@@ -138,14 +211,31 @@ export function startApp(
           .size.map((v) => (v / unit).toFixed(2))
           .join(" × ") +
         " " +
-        state.units +
-        " · " +
-        renderer.triangleCount() +
-        " triangles"
-      : "";
-    $("selection").textContent = state.selection
-      ? "Selected surface: " + JSON.stringify(state.selection)
-      : "";
+        state.units
+      : "—";
+    $("model-format").textContent = (
+      state.part?.format ||
+      state.file?.name.split(".").pop() ||
+      "—"
+    ).toUpperCase();
+    $("model-file").textContent =
+      state.part?.fileName || state.file?.name || "—";
+    $("part-description").textContent = state.part?.description || "";
+    $("part-description").parentElement!.hidden = !state.part?.description;
+    $("dirty-indicator").hidden = !state.dirty;
+    $("dimension-note").hidden = !renderer.bounds().assumedMillimeters;
+    $("selection").textContent = state.selection ? "Point selected" : "";
+    $("add-library").disabled = importPending;
+    $("add-library").hidden = !!state.part && state.part.id !== "imported";
+    $("add-library").textContent = importPending ? "Adding…" : "Add to library";
+    $("download").hidden = !state.capabilities.downloadFile;
+    $("save").hidden = !state.writable || !state.dirty;
+    $("reload").hidden = !state.file;
+    $("discard").hidden = !state.dirty;
+    $("part-tools").hidden = !$("part-tools").querySelector(
+      "button:not([hidden])",
+    );
+    queueViewPreview();
   }
   function ensureCanLeave(discardUnsaved = false) {
     if (state.dirty && !discardUnsaved)
@@ -154,57 +244,107 @@ export function startApp(
       );
   }
   function camera(name: string) {
-    state.camera = name;
-    if (name !== "custom") {
-      state.yaw = name === "isometric" ? -0.6 : 0;
-      state.pitch =
-        name === "top" ? Math.PI / 2 : name === "isometric" ? 0.6 : 0;
-    }
-    $("camera").value = name;
+    if (!renderer.camera()) state.defaultView = name;
+    renderer.configure({ camera: name });
+    $("camera").value = state.camera;
     draw();
     queueContext();
   }
-  function show(page: string) {
+  function show(page: AppState["page"]) {
+    $("chat-status").textContent = "";
     state.page = page;
+    document.documentElement.dataset.page = page;
+    $("part-tools").open = false;
+    $("viewer-actions").hidden = page !== "viewer";
     $("library").hidden = page !== "library";
     $("viewer").hidden = page !== "viewer";
-    $("settings").hidden = page !== "settings";
     $("heading").textContent =
       page === "viewer"
         ? state.part?.name || state.file?.name || "STL viewer"
-        : page === "settings"
-          ? "Viewer settings"
-          : "Parts Library";
+        : "Bits & Bolts";
+    updateLibraryNavigation();
+    $("view-toolbar").hidden = page === "library" && surface === "global";
+    $("add-part").hidden = page !== "library";
+    if (page === "library") renderLibrary();
+    updateSelection();
     draw();
     resize();
+    queueContext(0);
+  }
+  function updateLibraryNavigation() {
+    const inlinePart =
+      surface === "widget" &&
+      state.page === "viewer" &&
+      state.host.displayMode !== "fullscreen";
+    $("back").hidden = state.page === "library" || inlinePart;
+    $("view-library").hidden =
+      !inlinePart || !state.host.availableDisplayModes?.includes("fullscreen");
+  }
+  function showLibrary() {
+    ensureCanLeave();
+    generation++;
+    pendingDeepLink = null;
+    clearTimeout(contextTimer);
+    void unsubscribe().catch(fail);
+    state.file = null;
+    state.part = null;
+    importedSource = null;
+    state.selection = null;
+    state.etag = null;
+    state.writable = false;
+    exampleContext = [];
+    renderer.clear();
+    status("");
+    show("library");
+    if (!catalogLoaded && state.connected) void loadCatalog();
   }
   async function unsubscribe() {
     const uri = state.subscription;
     state.subscription = null;
-    if (uri) await request("resources/unsubscribe", { uri });
+    if (uri) await openai.resources!.unsubscribe({ uri });
+  }
+  async function readPart(part: PublicCadPart) {
+    let source: ReturnType<typeof partSourceResultSchema.parse> | undefined =
+      part.displaySource;
+    if (!source) {
+      const response = await app.callServerTool({
+        name: "cad.readPart",
+        arguments: { partId: part.id, representation: "display" },
+      });
+      if (response.isError)
+        throw Error(
+          response.content.find((block) => block.type === "text")?.text ||
+            "Could not load part.",
+        );
+      source = partSourceResultSchema.parse(response.structuredContent);
+    }
+    if ("url" in source) {
+      const response = await fetch(source.url);
+      if (!response.ok)
+        throw Error(`Could not load CAD part (${response.status}).`);
+      return { format: source.format, bytes: await response.arrayBuffer() };
+    }
+    return {
+      format: source.format,
+      bytes: Uint8Array.from(atob(source.blob), (c) => c.charCodeAt(0)).buffer,
+    };
   }
   async function openPart(part: PublicCadPart, discardUnsaved = false) {
+    pendingDeepLink = null;
     if (state.part?.id === part.id && !discardUnsaved) {
+      generation++;
       show("viewer");
       return;
     }
     ensureCanLeave(discardUnsaved);
     const token = ++generation,
       edits = editSequence;
-    const response = await request("tools/call", {
-      name: "cad.readPart",
-      arguments: { partId: part.id, representation: "display" },
-    });
-    if (response.isError)
-      throw Error(response.content?.[0]?.text || "Could not load part.");
+    const source = await readPart(part);
     if (token !== generation) return;
-    const source = response.structuredContent;
-    const bytes = source.blob
-      ? Uint8Array.from(atob(source.blob), (c) => c.charCodeAt(0)).buffer
-      : undefined;
     await renderer.load(
-      { format: source.format, bytes, mesh: source.mesh },
+      source,
       () => token === generation && edits === editSequence,
+      state,
     );
     if (edits !== editSequence)
       throw Error("Loading canceled because you edited the current geometry.");
@@ -212,103 +352,77 @@ export function startApp(
     void unsubscribe().catch(fail);
     state.selection = null;
     importedSource = null;
+    if (state.part?.id !== part.id) {
+      attachedView = undefined;
+      exampleContext = [];
+    }
     state.part = part;
     state.file = null;
     state.etag = null;
     state.writable = false;
     state.dirty = false;
-    state.zoom = 1;
+    renderer.configure({ zoom: 1 });
     $("save").disabled = true;
     camera(state.camera);
     show("viewer");
-    queueContext();
     if (!part.previews.isometric) {
       await new Promise((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(resolve)),
       );
       if (token !== generation || edits !== editSequence) return;
-      const capture = renderer.capture();
-      const previews = {
-        isometric: "data:" + capture.mimeType + ";base64," + capture.data,
-      };
-      const saved = await request("tools/call", {
+      const previews = renderer.capturePreviews();
+      const saved = await app.callServerTool({
         name: "cad.savePreviews",
         arguments: { partId: part.id, previews },
       });
       if (saved.isError)
-        throw Error(saved.content?.[0]?.text || "Preview could not be saved.");
+        throw Error(
+          saved.content.find((block) => block.type === "text")?.text ||
+            "Preview could not be saved.",
+        );
       part.previews = previews;
     }
   }
-  function renderLibrary(query = "") {
-    const container = $("parts");
-    container.replaceChildren();
-    for (const part of catalog.filter((p) =>
-      (p.name + " " + p.tags.join(" "))
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-    )) {
-      const button = document.createElement("button"),
-        title = document.createElement("strong"),
-        description = document.createElement("small");
-      button.className = "part";
-      title.textContent = part.name;
-      description.textContent = part.description;
-      if (part.previews.isometric) {
-        const image = document.createElement("img");
-        image.src = part.previews.isometric;
-        image.alt = "";
-        button.append(image);
-      }
-      button.append(title, description);
-      button.onclick = act(() => openPart(part));
-      container.append(button);
-    }
-    if (!container.children.length)
-      container.textContent = "No matching parts.";
+  function renderLibrary() {
+    library.render(
+      catalog,
+      $("search").value,
+      catalogLoaded ? "ready" : catalogError ? "error" : "loading",
+    );
+    $("retry-library").hidden = !catalogError || catalogLoaded;
+    if (state.page === "library") queueContext();
   }
-  async function generatePreviews() {
-    for (const part of catalog) {
-      if (disposed) return;
-      if (part.previews.isometric || !["stl", "3mf"].includes(part.format))
-        continue;
-      try {
-        const response = await request("tools/call", {
-          name: "cad.readPart",
-          arguments: { partId: part.id, representation: "display" },
-        });
-        if (disposed) return;
-        if (response.isError) throw Error("Could not read preview source.");
-        const source = response.structuredContent;
-        const bytes = Uint8Array.from(atob(source.blob), (c) =>
-          c.charCodeAt(0),
-        ).buffer;
-        const previews = await renderCadPreviews(
-          source.format as ModelFormat,
-          bytes,
-        );
-        if (disposed) return;
-        const saved = await request("tools/call", {
-          name: "cad.savePreviews",
-          arguments: { partId: part.id, previews },
-        });
-        if (saved.isError) throw Error("Could not save preview.");
-        const currentPart = catalog.find(
-          (candidate) => candidate.id === part.id,
-        );
-        if (currentPart) currentPart.previews = previews;
-        renderLibrary($("search").value);
-      } catch (error) {
-        if (!disposed) fail(error);
-      }
-    }
+  function loadCatalog(): Promise<void> {
+    if (catalogLoaded || !state.connected) return Promise.resolve();
+    if (catalogRequest) return catalogRequest;
+    if (catalogError) status("");
+    catalogError = false;
+    renderLibrary();
+    const revision = catalogRevision;
+    catalogRequest = app
+      .callServerTool({ name: "cad.listParts", arguments: {} })
+      .then((listing) => {
+        if (state.connected && revision === catalogRevision)
+          return toolResult(listing);
+      })
+      .catch((error) => {
+        if (state.connected && !catalogLoaded) {
+          catalogError = true;
+          renderLibrary();
+          fail(error);
+        }
+      })
+      .finally(() => {
+        catalogRequest = undefined;
+      });
+    return catalogRequest;
   }
   async function readFile(file: FileInfo, token: number) {
     const sequence = ++readSequence,
       edits = editSequence;
-    const response = await request("resources/read", {
+    const response = await openai.resources!.read({
       uri: file.resourceUri,
-      _meta: { "openai/resource": { representation: "blob" } },
+      representation: "blob",
     });
     if (token !== generation || sequence !== readSequence) return;
     if (edits !== editSequence) {
@@ -318,11 +432,11 @@ export function startApp(
       return;
     }
     const content =
-      response.contents?.find((c: any) => c.uri === file.resourceUri) ||
+      response.contents?.find((c) => c.uri === file.resourceUri) ||
       response.contents?.[0];
     if (!content) throw new Error("Host returned no file contents.");
     const bytes =
-      content.blob !== undefined
+      "blob" in content
         ? Uint8Array.from(atob(content.blob), (c) => c.charCodeAt(0))
         : new TextEncoder().encode(content.text || "");
     await renderer.load(
@@ -334,45 +448,66 @@ export function startApp(
         token === generation &&
         sequence === readSequence &&
         edits === editSequence,
+      state,
     );
     if (edits !== editSequence)
       throw Error("Reload canceled because you edited the current geometry.");
     if (token !== generation || sequence !== readSequence) return;
     state.selection = null;
     importedSource = null;
-    state.etag = content._meta?.["openai/resource"]?.etag || null;
+    state.etag = content.openaiMetadata?.etag || null;
     state.writable =
       file.name.toLowerCase().endsWith(".stl") &&
-      content._meta?.["openai/resource"]?.writable === true;
+      content.openaiMetadata?.writable === true;
     state.dirty = false;
     $("save").disabled = true;
     show("viewer");
-    queueContext();
   }
   async function openFile(file: FileInfo, discardUnsaved = false) {
-    if (state.file?.resourceUri === file.resourceUri) return;
+    pendingDeepLink = null;
+    if (state.file?.resourceUri === file.resourceUri) {
+      if (renderer.triangleCount()) {
+        generation++;
+        show("viewer");
+      }
+      return;
+    }
     ensureCanLeave(discardUnsaved);
-    if (state.capabilities.experimental?.["openai/resource"] == null)
+    if (openai.resources == null)
       throw Error("This host does not advertise file resources.");
     const token = ++generation;
     await unsubscribe().catch(fail);
     if (token !== generation) return;
     state.part = null;
+    attachedView = undefined;
+    exampleContext = [];
     state.file = file;
     renderer.clear();
     state.etag = null;
     state.writable = false;
     state.dirty = false;
-    state.zoom = 1;
+    renderer.configure({ zoom: 1 });
     $("save").disabled = true;
     try {
-      await request("resources/subscribe", { uri: file.resourceUri });
+      await openai.resources!.subscribe({ uri: file.resourceUri });
       if (token === generation) state.subscription = file.resourceUri;
-      else await request("resources/unsubscribe", { uri: file.resourceUri });
+      else await openai.resources!.unsubscribe({ uri: file.resourceUri });
     } catch (error) {
       fail(error);
     }
-    if (token === generation) await readFile(file, token);
+    if (token === generation) {
+      const reading = readFile(file, token);
+      const sequence = readSequence;
+      try {
+        await reading;
+      } catch (error) {
+        if (token === generation && sequence === readSequence) {
+          state.file = null;
+          void unsubscribe().catch(fail);
+        }
+        throw error;
+      }
+    }
   }
   async function save() {
     if (
@@ -386,8 +521,7 @@ export function startApp(
       uri = state.file.resourceUri,
       version = state.etag,
       edits = editSequence;
-    const response = await request("openai/resources/write", {
-      uri,
+    const response = await openai.resources!.write(uri, {
       text: renderer.exportStl(),
       ifMatch: version,
     });
@@ -396,6 +530,8 @@ export function startApp(
       state.etag = response.etag;
       state.dirty = edits !== editSequence;
       $("save").disabled = !state.dirty;
+      draw();
+      queueContext(0);
       status(
         state.dirty
           ? "Saved earlier rotation; newer edits are unsaved."
@@ -410,18 +546,110 @@ export function startApp(
     else throw new Error("Unrecognized save response.");
     return response;
   }
-  function queueContext() {
+  function queueContext(delay = 300) {
+    queueViewPreview();
     clearTimeout(contextTimer);
-    if (state.connected && state.page === "viewer")
-      contextTimer = setTimeout(() => shareContext(false).catch(fail), 300);
+    if (state.connected)
+      contextTimer = setTimeout(() => shareContext(false).catch(fail), delay);
+  }
+  function queueViewPreview() {
+    if (state.page !== "viewer" || !renderer.triangleCount()) return;
+    const key = JSON.stringify([
+      generation,
+      editSequence,
+      state.camera,
+      state.mode,
+      state.yaw,
+      state.pitch,
+      state.zoom,
+      state.grid,
+      state.selection,
+      state.host.theme,
+      renderer.context?.(),
+      $("viewport").clientWidth,
+      $("viewport").clientHeight,
+    ]);
+    if (key === viewPreviewKey) return;
+    clearTimeout(viewPreviewTimer);
+    viewPreviewTimer = setTimeout(() => {
+      if (state.page !== "viewer" || !renderer.triangleCount()) return;
+      const capture = renderer.capture();
+      $("view-preview").src = `data:${capture.mimeType};base64,${capture.data}`;
+      $("view-preview").hidden = false;
+      $("view-preview").alt =
+        `Current view of ${state.part?.name || state.file?.name || "the part"}`;
+      viewPreviewKey = key;
+      updateSelection();
+    }, 100);
+  }
+  function partContent(part: PublicCadPart): ContentBlock {
+    return {
+      type: "text",
+      text: `${part.name}: ${part.description}${part.resourceUri ? `\nPart ID: ${part.id}\nResource: ${part.resourceUri}` : ""}`,
+      _meta: {
+        "bits-and-bolts/partId": part.id,
+        "openai/title": part.name,
+        ...(part.previews.isometric
+          ? { "openai/thumbnail": { src: part.previews.isometric } }
+          : {}),
+      },
+    };
+  }
+  function updateSelection() {
+    library.updateSelection();
+    $("chat-actions").hidden =
+      !canShare() || state.page !== "viewer" || (!state.part && !state.file);
+    $("share").disabled = contextPending;
+    $("share-all-types").hidden = !canShareAllTypes();
+    $("share").setAttribute("aria-busy", String(contextPending));
+    $("view-caption").textContent = [
+      $("camera").selectedOptions[0]?.textContent || "Current view",
+      state.selection ? "Point selected" : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+  async function togglePart(part: PublicCadPart) {
+    if (contextPending || !canShare()) return;
+    clearTimeout(contextTimer);
+    const previous = selectedParts;
+    selectedParts = previous.some(
+      (block) => block._meta?.["bits-and-bolts/partId"] === part.id,
+    )
+      ? previous.filter(
+          (block) => block._meta?.["bits-and-bolts/partId"] !== part.id,
+        )
+      : [...previous, partContent(part)];
+    try {
+      await shareContext(false);
+    } catch (error) {
+      selectedParts = previous;
+      updateSelection();
+      throw error;
+    }
   }
   function viewContext(withImage: boolean) {
     const data = {
       page: state.page,
+      schematic: state.part?.name || state.file?.name || "Parts library",
       dirty: state.dirty,
       writable: state.writable,
       part: state.part?.id || null,
       file: state.file?.name || null,
+      library:
+        state.page === "library"
+          ? {
+              query: $("search").value,
+              status: catalogLoaded
+                ? "ready"
+                : catalogError
+                  ? "error"
+                  : "loading",
+              parts: filterParts(catalog, $("search").value).map(
+                ({ id, name }) => ({ id, name }),
+              ),
+            }
+          : null,
       camera: state.camera,
       yawRadians: state.yaw,
       pitchRadians: state.pitch,
@@ -430,44 +658,73 @@ export function startApp(
       grid: state.grid,
       displayUnits: state.units,
       dimensionsMm: renderer.triangleCount() ? renderer.bounds().size : null,
-      note: $("note").value,
       selection: state.selection ?? null,
-      renderer: renderer.context?.() ?? null,
+      renderer: state.page === "viewer" ? (renderer.context?.() ?? null) : null,
     };
-    const content: Array<Record<string, unknown>> = [
-      {
-        type: "text",
-        text: "Bits & Bolts selected view: " + JSON.stringify(data),
-      },
-    ];
+    const content: ContentBlock[] = [...selectedParts, ...exampleContext];
     if (withImage)
       content.push({
         type: "image",
         ...renderer.capture(),
+        _meta: {
+          "openai/title": `View of ${data.schematic}`,
+          "bits-and-bolts/viewId": crypto.randomUUID(),
+        },
       });
+    else if (attachedView) content.push(attachedView);
     return { content, structuredContent: data };
   }
   async function shareContext(withImage: boolean) {
-    if (!renderer.triangleCount()) return;
-    await request("ui/update-model-context", viewContext(withImage));
-    // Effective attached state is displayed only from hostContext below.
-    if (withImage) status("View context sent to host.");
+    if (!state.connected || !canShare()) return;
+    if (contextPending) {
+      contextQueued = true;
+      return;
+    }
+    const previousView = attachedView;
+    const context = viewContext(withImage);
+    const capture = withImage
+      ? context.content.find((block) => block.type === "image")
+      : undefined;
+    contextPending = true;
+    updateSelection();
+    if (capture) attachedView = capture;
+    try {
+      await openai.modelContext!.update(context);
+      if (withImage) $("chat-status").textContent = "View attached to chat.";
+    } catch (error) {
+      if (capture && attachedView === capture) attachedView = previousView;
+      throw error;
+    } finally {
+      contextPending = false;
+      updateSelection();
+      if (contextQueued) {
+        contextQueued = false;
+        void shareContext(false).catch(fail);
+      }
+    }
   }
-  function applyHost(update: Record<string, any>) {
+  function applyHost(update: NonNullable<ReturnType<App["getHostContext"]>>) {
     Object.assign(state.host, update);
-    document.documentElement.style.setProperty(
-      "--cursor-interaction",
-      state.host["openai/interactionCursor"] === "default"
-        ? "default"
-        : "pointer",
-    );
+    if (Object.hasOwn(update, "safeAreaInsets")) {
+      for (const edge of ["top", "right", "bottom", "left"] as const) {
+        const value = update.safeAreaInsets?.[edge];
+        if (value == null)
+          document.documentElement.style.removeProperty(`--safe-area-${edge}`);
+        else
+          document.documentElement.style.setProperty(
+            `--safe-area-${edge}`,
+            `${Math.max(0, value)}px`,
+          );
+      }
+    }
+    updateSelection();
     if (update.theme) {
       document.documentElement.style.colorScheme = update.theme;
       document.documentElement.dataset.theme = update.theme;
       window.dispatchEvent(new Event("cad-theme-change"));
     }
     if (typeof update.styles?.css?.fonts === "string") {
-      let fonts = $("host-fonts");
+      let fonts = document.getElementById("host-fonts");
       if (!fonts) {
         fonts = document.createElement("style");
         fonts.id = "host-fonts";
@@ -482,288 +739,278 @@ export function startApp(
       Object.hasOwn(update, "openai/modelContext") &&
       update["openai/modelContext"] === null
     ) {
-      clearTimeout(contextTimer);
-      $("note").value = "";
+      // A consumed attachment must not cancel a newer navigation or view update.
       state.selection = null;
       renderer.clearSelection();
     }
-    if (Object.hasOwn(update, "openai/modelContext"))
-      $("attached").textContent =
-        update["openai/modelContext"] === null
-          ? "No view attached"
-          : update["openai/modelContext"]?.updateId
-            ? "View attached"
-            : "Context state unavailable";
-    if (update["openai/deepLink"]?.url) {
-      const url = new URL(
-        update["openai/deepLink"].url,
-        "https://bits-and-bolts.invalid",
+    if (Object.hasOwn(update, "openai/modelContext")) {
+      const modelContext = update["openai/modelContext"] as
+        OpenAIModelContextHostState | undefined;
+      if (attachedView) {
+        const id = attachedView._meta?.["bits-and-bolts/viewId"];
+        attachedView = modelContext?.content?.find(
+          (block: ContentBlock) =>
+            block._meta?.["bits-and-bolts/viewId"] === id,
+        );
+      }
+      exampleContext = (modelContext?.content ?? []).filter(
+        (block: ContentBlock) =>
+          block._meta?.["bits-and-bolts/contextExample"] === true,
       );
+      selectedParts = (modelContext?.content ?? []).filter(
+        (block: ContentBlock) =>
+          typeof block._meta?.["bits-and-bolts/partId"] === "string",
+      );
+      updateSelection();
+    }
+    const deepLink = update["openai/deepLink"] as
+      OpenAIDeepLinkHostState | undefined;
+    if (deepLink?.url) {
+      pendingDeepLink = null;
+      const url = new URL(deepLink.url, "https://bits-and-bolts.invalid");
       const id = decodeURIComponent(url.pathname.replace(/^\/parts\//, "")),
         part = catalog.find((p) => p.id === id);
-      if (part) void openPart(part).catch(fail);
-      else if (url.pathname === "/settings") {
+      if (!catalogLoaded && url.pathname.startsWith("/parts/")) {
         ensureCanLeave();
-        show("settings");
-      } else if (url.pathname === "/") {
-        ensureCanLeave();
-        show("library");
+        generation++;
+        pendingDeepLink = deepLink;
+      } else if (part) void openPart(part).catch(fail);
+      else if (url.pathname === "/") {
+        showLibrary();
       }
     }
-    $("fullscreen").hidden =
-      !state.host.availableDisplayModes?.includes("fullscreen");
-    $("fullscreen").textContent =
-      state.host.displayMode === "fullscreen" ? "Return" : "Expand";
+    document.documentElement.dataset.displayMode =
+      state.host.displayMode || "inline";
+    updateLibraryNavigation();
     draw();
   }
-  async function toolResult(payload: any) {
+  async function toolResult(
+    payload: Awaited<ReturnType<App["callServerTool"]>>,
+    initial = false,
+  ) {
     if (payload?.isError)
       throw new Error(
         payload.content
-          ?.filter((c: any) => c.type === "text")
-          .map((c: any) => c.text)
+          ?.filter((c) => c.type === "text")
+          .map((c) => c.text)
           .join("\n") || "Tool failed.",
       );
-    const data = payload?.structuredContent;
+    const data = payload?.structuredContent as
+      | Partial<{
+          parts: PublicCadPart[];
+          localFilesystem: boolean;
+          uploadUrl: string;
+          file: FileInfo;
+          part: CadPartMetadata & { previews?: PublicCadPart["previews"] };
+          page: AppState["page"];
+          preferences: CadPreferences;
+          camera: string;
+          mode: string;
+        }>
+      | undefined;
     if (!data) return;
-    if (data.parts) {
+    if (data.parts && (!initial || !catalogLoaded)) {
+      catalogRevision++;
+      catalogLoaded = true;
+      catalogError = false;
       catalog = data.parts;
-      renderLibrary($("search").value);
-      previewTask ??= generatePreviews().finally(() => {
-        previewTask = undefined;
-      });
+      renderLibrary();
     }
     if (data.localFilesystem !== undefined)
       localFilesystem = data.localFilesystem;
-    if (data.settingsLifetime)
-      $("settings-info").textContent = data.settingsLifetime;
+    if (typeof data.uploadUrl === "string") uploadUrl = data.uploadUrl;
     if (
       (data.file && state.file?.resourceUri !== data.file.resourceUri) ||
       (data.part && state.part?.id !== data.part.id) ||
-      (data.page && data.page !== state.page)
+      (data.page === "library" && data.page !== state.page)
     )
       ensureCanLeave();
     if (data.preferences) {
-      state.syncedSettings = true;
       state.units = data.preferences.units;
       state.grid = data.preferences.showGrid;
-      $("units").value = state.units;
-      $("grid").checked = state.grid;
       state.defaultView = data.preferences.defaultView;
-      $("default-camera").value = state.defaultView;
+      renderer.configure({ units: state.units, grid: state.grid });
       camera(state.defaultView);
     }
-    if (data.file) await openFile(data.file);
-    else if (data.part) {
-      await openPart(data.part);
-    } else if (data.page) show(data.page);
-    if (data.camera) camera(data.camera);
-    if (data.mode) {
-      state.mode = data.mode;
-      $("mode").value = data.mode;
-      draw();
-      queueContext();
+    // A startup link owns initial routing, but newer user navigation wins.
+    if (!initial || (generation === 0 && !pendingDeepLink)) {
+      if (data.file || data.part) {
+        const opening = data.file
+          ? openFile(data.file)
+          : openPart({
+              ...data.part!,
+              previews: previewImagesSchema.parse(
+                payload._meta?.previews ?? data.part?.previews ?? {},
+              ),
+            });
+        const token = generation;
+        await opening;
+        if (token !== generation) return;
+      } else if (data.page === "library") showLibrary();
+      if (data.camera) camera(data.camera);
+      if (data.mode) {
+        state.mode = data.mode;
+        renderer.configure({ mode: state.mode });
+        $("mode").value = state.mode;
+        draw();
+        queueContext();
+      }
     }
-    if (initialDeepLink) {
-      const link = initialDeepLink;
-      initialDeepLink = null;
+    if (pendingDeepLink && catalogLoaded && !initialToolResultPending) {
+      const link = pendingDeepLink;
+      pendingDeepLink = null;
       applyHost({ "openai/deepLink": link });
     }
   }
   function resize() {
     if (resizing !== undefined) cancelAnimationFrame(resizing);
-    resizing = requestAnimationFrame(() =>
-      notify("ui/notifications/size-changed", {
-        height: Math.ceil(document.body.getBoundingClientRect().height),
-      }),
-    );
+    resizing = requestAnimationFrame(() => {
+      if (state.connected)
+        void app
+          .sendSizeChanged({
+            height: Math.ceil(document.body.getBoundingClientRect().height),
+          })
+          .catch(fail);
+    });
   }
-  type Rule = {
-    type: string;
-    enum?: unknown[];
-    minimum?: number;
-    maximum?: number;
-    maxLength?: number;
-  };
-  const liveTools: Array<{
-    name: string;
-    description: string;
-    inputSchema: {
-      type: string;
-      properties: Record<string, Rule>;
-      required?: string[];
-      additionalProperties: boolean;
-    };
-    annotations?: { readOnlyHint: boolean };
-  }> = [
+
+  app.registerTool(
+    "read_view",
     {
-      name: "read_view",
-      description:
-        "Read the current mounted Bits & Bolts view, including part, camera, zoom, note and unsaved edits.",
-      inputSchema: {
-        type: "object",
-        properties: {},
-        additionalProperties: false,
-      },
+      description: "Read the current part, camera, zoom, and unsaved edits.",
+      inputSchema: z.strictObject({}),
       annotations: { readOnlyHint: true },
     },
+    () => viewContext(false),
+  );
+  app.registerTool(
+    "open_part",
     {
-      name: "open_part",
-      description:
-        "Open a catalog part in this mounted view. Refuses to discard unsaved geometry unless discardUnsaved is true.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          partId: { type: "string" },
-          discardUnsaved: { type: "boolean" },
-        },
-        required: ["partId"],
-        additionalProperties: false,
-      },
+      description: "Open a library part in the current viewer.",
+      inputSchema: z.strictObject({
+        partId: z.string(),
+        discardUnsaved: z.boolean().optional(),
+      }),
     },
-    {
-      name: "configure_view",
-      description:
-        "Change this mounted viewer's camera or display while preserving its current part and geometry.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          camera: { type: "string", enum: renderer.cameras },
-          mode: { type: "string", enum: renderer.modes },
-          zoom: { type: "number", minimum: 0.3, maximum: 3 },
-          grid: { type: "boolean" },
-          units: { type: "string", enum: ["mm", "in"] },
-          yawRadians: { type: "number" },
-          pitchRadians: { type: "number" },
-          note: { type: "string", maxLength: 8192 },
-        },
-        additionalProperties: false,
-      },
-    },
-    {
-      name: "rotate_geometry",
-      description:
-        "Rotate the current geometry 90 degrees around X, marking an unsaved edit. Does not write the file.",
-      inputSchema: {
-        type: "object",
-        properties: {},
-        additionalProperties: false,
-      },
-    },
-    {
-      name: "save_file",
-      description:
-        "Save this viewer's edited file with its current ETag. A conflict preserves unsaved edits and does not overwrite the external change.",
-      inputSchema: {
-        type: "object",
-        properties: {},
-        additionalProperties: false,
-      },
-    },
-  ];
-  async function callLiveTool(params: any) {
-    const tool = liveTools.find((t) => t.name === params?.name);
-    if (!tool) throw new Error("Unknown app tool.");
-    const args = params.arguments ?? {};
-    if (!args || typeof args !== "object" || Array.isArray(args))
-      throw new Error("Arguments must be an object.");
-    for (const key of tool.inputSchema.required || [])
-      if (!Object.hasOwn(args, key))
-        throw new Error("Missing argument: " + key);
-    for (const [key, value] of Object.entries(args)) {
-      const rule = tool.inputSchema.properties[key];
-      if (
-        !rule ||
-        typeof value !== rule.type ||
-        (rule.enum && !rule.enum.includes(value)) ||
-        (typeof value === "number" &&
-          (!Number.isFinite(value) ||
-            (rule.minimum !== undefined && value < rule.minimum) ||
-            (rule.maximum !== undefined && value > rule.maximum))) ||
-        (rule.maxLength !== undefined &&
-          typeof value === "string" &&
-          value.length > rule.maxLength)
-      )
-        throw new Error("Invalid argument: " + key);
-    }
-    if (tool.name === "open_part") {
+    async (args) => {
       if (state.dirty && !args.discardUnsaved)
-        throw new Error(
+        throw Error(
           "The view has unsaved geometry. Save it first or explicitly discard it.",
         );
-      const part = catalog.find((p) => p.id === args.partId);
+      const part = catalog.find((part) => part.id === args.partId);
       if (!part) throw Error("Unknown part: " + args.partId);
       await openPart(part, args.discardUnsaved === true);
-    } else if (tool.name === "configure_view") {
+      return viewContext(false);
+    },
+  );
+  app.registerTool(
+    "configure_view",
+    {
+      description:
+        "Adjust the current viewer's camera, display, zoom, grid, and units.",
+      inputSchema: z.strictObject({
+        camera: z.enum(renderer.cameras).optional(),
+        mode: z.enum(renderer.modes).optional(),
+        zoom: z.number().min(0.3).max(3).optional(),
+        grid: z.boolean().optional(),
+        units: z.enum(["mm", "in"]).optional(),
+        yawRadians: z.number().optional(),
+        pitchRadians: z.number().optional(),
+      }),
+    },
+    (args) => {
       if (state.page !== "viewer" || !renderer.triangleCount())
-        throw new Error("Open a part first.");
+        throw Error("Open a part first.");
       if (args.camera !== undefined) camera(args.camera);
       if (args.yawRadians !== undefined || args.pitchRadians !== undefined) {
-        state.yaw = args.yawRadians ?? state.yaw;
-        state.pitch = args.pitchRadians ?? state.pitch;
-        camera("custom");
+        renderer.configure({ yaw: args.yawRadians, pitch: args.pitchRadians });
       }
       if (args.mode !== undefined) {
         state.mode = args.mode;
         $("mode").value = args.mode;
       }
-      if (args.zoom !== undefined) state.zoom = args.zoom;
-      if (args.grid !== undefined) {
-        state.grid = args.grid;
-        $("grid").checked = args.grid;
-      }
-      if (args.units !== undefined) {
-        state.units = args.units;
-        $("units").value = args.units;
-      }
-      if (args.note !== undefined) $("note").value = args.note;
+      if (args.zoom !== undefined) renderer.configure({ zoom: args.zoom });
+      if (args.grid !== undefined) state.grid = args.grid;
+      if (args.units !== undefined) state.units = args.units;
+      renderer.configure({
+        mode: args.mode,
+        grid: args.grid,
+        units: args.units,
+      });
       draw();
       queueContext();
-    } else if (tool.name === "rotate_geometry") rotateGeometry();
-    else if (tool.name === "save_file") {
+      return viewContext(false);
+    },
+  );
+  app.registerTool(
+    "rotate_geometry",
+    {
+      description:
+        "Rotate the current part 90 degrees around X as an unsaved edit.",
+      inputSchema: z.strictObject({}),
+    },
+    () => {
+      rotateGeometry();
+      return viewContext(false);
+    },
+  );
+  app.registerTool(
+    "save_file",
+    {
+      description:
+        "Save edits to the open STL file without overwriting external changes.",
+      inputSchema: z.strictObject({}),
+    },
+    async () => {
       const result = await save();
       return {
         content: [{ type: "text", text: JSON.stringify(result) }],
         structuredContent: result,
         isError: result.outcome !== "saved",
       };
-    }
-    return viewContext(false);
-  }
-  transport.on("ui/notifications/tool-result", (payload) => {
-    void toolResult(payload).catch(fail);
-  });
-  transport.on("ui/notifications/tool-input", (payload) => {
+    },
+  );
+  app.ontoolresult = (payload) => {
+    const initial = initialToolResultPending;
+    initialToolResultPending = false;
+    void toolResult(payload, initial).catch(fail);
+  };
+  app.ontoolinput = (payload) => {
     if (payload?.arguments?.file)
-      void openFile(payload.arguments.file).catch(fail);
-  });
-  transport.on("ui/notifications/host-context-changed", (payload) => {
+      void openFile(payload.arguments.file as FileInfo).catch(fail);
+  };
+  app.onhostcontextchanged = (payload) => {
     try {
       applyHost(payload);
     } catch (error) {
       fail(error);
     }
-  });
-  transport.on("notifications/resources/updated", (payload) => {
+  };
+  function resourceUpdated(payload: { uri: string }) {
     if (!state.file || state.file.resourceUri !== payload.uri) return;
     if (state.dirty)
       status(
         "File changed externally. Your unsaved geometry is preserved; reload explicitly to discard it.",
       );
     else void readFile(state.file, generation).catch(fail);
-  });
-  transport.handle("ui/resource-teardown", async () => {
-    disposed = true;
+  }
+  app.onteardown = async () => {
+    generation++;
+    state.connected = false;
+    clearTimeout(viewPreviewTimer);
+    clearTimeout(catalogTimer);
     clearTimeout(contextTimer);
+    bodyObserver.disconnect();
+    if (resizing !== undefined) cancelAnimationFrame(resizing);
     await unsubscribe().catch(() => {});
+    library.dispose();
     renderer.dispose();
-    setTimeout(() => transport.dispose(), 0);
     return {};
-  });
-  transport.handle("tools/list", () => ({ tools: liveTools }));
-  transport.handle("tools/call", async (params) => {
+  };
+  const callTool = app.oncalltool!;
+  app.oncalltool = async (params, extra) => {
     try {
-      return await callLiveTool(params);
+      return await callTool(params, extra);
     } catch (error) {
       return {
         isError: true,
@@ -775,65 +1022,87 @@ export function startApp(
         ],
       };
     }
-  });
-  transport.handle("ping", () => ({}));
-  $("back").onclick = act(() => {
-    ensureCanLeave();
-    generation++;
-    clearTimeout(contextTimer);
-    unsubscribe().catch(fail);
-    state.file = null;
-    state.part = null;
-    renderer.clear();
-    state.dirty = false;
-    show("library");
-    if (state.connected)
-      request("ui/update-model-context", {
-        content: [],
-        structuredContent: { page: "library" },
-      }).catch(fail);
-  });
-  $("search").oninput = (e: any) => renderLibrary(e.target.value);
-  $("host-file-open").onclick = act(async () => {
-    if (state.capabilities.experimental?.["openai/files"] == null)
-      throw new Error("This host does not support opening local files.");
-    await request("openai/files/open", { path: $("host-file-path").value });
-    status("Opened in Codex.");
-  });
-  $("host-file-path").onkeydown = (event: any) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      $("host-file-open").click();
-    }
   };
-  $("camera").onchange = (e: any) => camera(e.target.value);
-  $("mode").onchange = (e: any) => {
-    state.mode = e.target.value;
+  $("keep-editing").onclick = () => $("unsaved-dialog").close();
+  $("discard-and-leave").onclick = act(() => {
+    $("unsaved-dialog").close();
+    state.dirty = false;
+    showLibrary();
+  });
+  $("back").onclick = act(() => {
+    if (state.dirty) $("unsaved-dialog").showModal();
+    else showLibrary();
+  });
+  $("retry-library").onclick = act(loadCatalog);
+  $("search").oninput = renderLibrary;
+  $("add-part").onclick = () => $("import").click();
+  document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    const menu = $("part-tools");
+    if (!menu.contains(event.target) || event.target.closest("button"))
+      menu.open = false;
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const menu = $("part-tools");
+    if (!menu.open) return;
+    menu.open = false;
+    menu.querySelector("summary")!.focus();
+  });
+  $("camera").onchange = () => camera($("camera").value);
+  $("mode").onchange = () => {
+    state.mode = $("mode").value;
+    renderer.configure({ mode: state.mode });
     draw();
     queueContext();
   };
-  $("share").onclick = act(() => {
+  const chatAction = (fn: () => void | Promise<void>) => async () => {
+    $("chat-status").textContent = "";
+    try {
+      await fn();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      $("chat-status").textContent = message.replace(
+        /^MCP error -?\d+:\s*/,
+        "",
+      );
+    }
+  };
+  $("share").onclick = chatAction(() => {
     clearTimeout(contextTimer);
+    $("chat-status").textContent = "Attaching view…";
     return shareContext(true);
   });
-  $("ask").onclick = act(async () => {
-    clearTimeout(contextTimer);
-    await shareContext(false);
-    status("Continue in Codex to confirm the follow-up.");
-    const reply = await request("ui/message", {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: $("note").value || "Explain the CAD part in my attached view.",
+  $("share-all-types").onclick = chatAction(() => {
+    if (!canShareAllTypes() || !state.part) return;
+    const meta = { "bits-and-bolts/contextExample": true };
+    exampleContext = [
+      {
+        type: "text",
+        text: `Inspecting ${state.part.name} in ${state.units}.`,
+        _meta: { ...meta, "openai/title": "Current view" },
+      },
+      {
+        type: "resource_link",
+        uri: state.part.resourceUri,
+        name: state.part.fileName,
+        title: `${state.part.name} reference`,
+        mimeType: "text/markdown",
+        _meta: meta,
+      },
+      {
+        type: "resource",
+        resource: {
+          uri: state.part.resourceUri,
+          mimeType: "text/markdown",
+          text: `# ${state.part.name}\n\n${state.part.description}`,
         },
-        ...viewContext(true).content,
-      ],
-    });
-    if (reply.isError) throw new Error("Host declined the message.");
-    status("Continue in chat.");
+        _meta: { ...meta, "openai/title": "Part notes" },
+      },
+    ];
+    $("part-tools").open = false;
+    return shareContext(true);
   });
-  $("note").oninput = () => queueContext();
   $("save").onclick = act(save);
   $("reload").onclick = act(() => {
     if (state.file) return readFile(state.file, generation);
@@ -849,74 +1118,87 @@ export function startApp(
     queueContext();
   }
   $("fit").onclick = act(() => {
-    state.zoom = 1;
+    renderer.configure({ zoom: 1 });
     renderer.fit();
     draw();
     queueContext();
   });
-  $("settings-button").onclick = act(() => {
-    ensureCanLeave();
-    show("settings");
-  });
   $("open-source").onclick = act(async () => {
     if (!state.part || !localFilesystem)
       throw Error("A local catalog part is required.");
-    const result = await request("tools/call", {
+    const result = await app.callServerTool({
       name: "cad.partPath",
       arguments: { partId: state.part.id },
     });
     if (result.isError)
-      throw Error(result.content?.[0]?.text || "Source unavailable.");
-    await request("openai/files/open", { path: result.structuredContent.path });
+      throw Error(
+        result.content.find((block) => block.type === "text")?.text ||
+          "Source unavailable.",
+      );
+    const path = result.structuredContent?.path;
+    if (typeof path !== "string") throw Error("Source path unavailable.");
+    await openai.files!.open(path);
   });
-  $("rotate").onclick = act(rotateGeometry);
-  $("fullscreen").onclick = act(async () => {
-    if (!state.host.availableDisplayModes?.includes("fullscreen"))
-      throw new Error("Host does not advertise fullscreen support.");
-    const response = await request("ui/request-display-mode", {
-      mode: state.host.displayMode === "fullscreen" ? "inline" : "fullscreen",
-    });
-    status("Display mode: " + response.mode);
+  $("view-library").onclick = act(async () => {
+    ensureCanLeave();
+    await loadCatalog();
+    if (!catalogLoaded) return;
+    const response = await app.requestDisplayMode({ mode: "fullscreen" });
+    applyHost({ displayMode: response.mode });
+    if (response.mode === "fullscreen") showLibrary();
   });
   $("download").onclick = act(async () => {
     if (!state.capabilities.downloadFile)
       throw new Error("This host does not support file downloads.");
     const name = (state.part?.id || "part") + ".stl";
-    const response = await request("ui/download-file", {
-      contents: [
-        {
-          type: "resource",
-          resource: {
-            uri: "file:///" + encodeURIComponent(name),
-            mimeType: "model/stl",
-            text: renderer.exportStl(),
+    const response = await app.downloadFile(
+      {
+        contents: [
+          {
+            type: "resource",
+            resource: {
+              uri: "file:///" + encodeURIComponent(name),
+              mimeType: "model/stl",
+              text: renderer.exportStl(),
+            },
           },
-        },
-      ],
-    });
+        ],
+      },
+      { timeout: 300000 },
+    );
     status(response.isError ? "Download canceled." : "STL saved.");
   });
-  $("import").onchange = act(async (event: any) => {
-    const file = event.target.files?.[0];
+  $("import").onchange = act(async (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
     if (!file) return;
+    const format = file.name.split(".").pop()?.toLowerCase() || "";
+    if (!renderer.formats.includes(format))
+      throw new Error("Choose an STL, 3MF, STEP, or STP file.");
     if (file.size > 16 * 1024 * 1024) throw new Error("File exceeds 16 MiB.");
     ensureCanLeave();
+    status(`Opening ${file.name}…`);
+    pendingDeepLink = null;
     const token = ++generation;
     await unsubscribe().catch(fail);
     const edits = editSequence;
     const source = {
-      format: file.name.split(".").pop()?.toLowerCase() || "stl",
+      format,
       bytes: await file.arrayBuffer(),
     };
     await renderer.load(
       source,
       () => token === generation && edits === editSequence,
+      state,
     );
     if (edits !== editSequence)
       throw Error("Import canceled because you edited the current geometry.");
     if (token !== generation) return;
     importedSource = source;
     state.selection = null;
+    attachedView = undefined;
+    exampleContext = [];
     state.part = {
       name: file.name,
       id: "imported",
@@ -939,82 +1221,8 @@ export function startApp(
     state.dirty = false;
 
     $("save").disabled = true;
+    status("");
     show("viewer");
-    queueContext();
-  });
-  async function savePreferences(key: string, value: unknown) {
-    if (state.syncedSettings) {
-      const response = await request("tools/call", {
-        name: "settings.update",
-        arguments: { set: { [key]: value } },
-      });
-      if (response.isError)
-        throw new Error(
-          response.content
-            ?.filter((c: any) => c.type === "text")
-            .map((c: any) => c.text)
-            .join("\n") || "Settings could not be saved.",
-        );
-      status("Viewer defaults updated.");
-      return;
-    }
-    status("Preferences apply to this preview only.");
-  }
-  async function changePreference(
-    element: HTMLInputElement,
-    key: string,
-    value: unknown,
-    apply: () => void,
-    previous: any,
-  ) {
-    element.disabled = true;
-    try {
-      await savePreferences(key, value);
-      apply();
-      draw();
-      queueContext();
-    } catch (error) {
-      if (element.type === "checkbox") element.checked = previous;
-      else element.value = previous;
-      fail(error);
-    } finally {
-      element.disabled = false;
-    }
-  }
-  $("units").onchange = (e: any) =>
-    changePreference(
-      e.target,
-      "units",
-      e.target.value,
-      () => {
-        state.units = e.target.value;
-      },
-      state.units,
-    );
-  $("grid").onchange = (e: any) =>
-    changePreference(
-      e.target,
-      "showGrid",
-      e.target.checked,
-      () => {
-        state.grid = e.target.checked;
-      },
-      state.grid,
-    );
-  $("default-camera").onchange = (e: any) =>
-    changePreference(
-      e.target,
-      "defaultView",
-      e.target.value,
-      () => {
-        state.defaultView = e.target.value;
-        camera(state.defaultView);
-      },
-      state.defaultView,
-    );
-  $("skills").onclick = act(async () => {
-    const response = await request("ui/open-link", { url: "codex://skills" });
-    if (response.isError) throw new Error("The host could not open skills.");
   });
   $("discard").onclick = act(async () => {
     if (state.file) await readFile(state.file, generation);
@@ -1024,6 +1232,7 @@ export function startApp(
       await renderer.load(
         importedSource,
         () => token === generation && edits === editSequence,
+        state,
       );
       if (token !== generation || edits !== editSequence) return;
       state.dirty = false;
@@ -1031,103 +1240,140 @@ export function startApp(
       draw();
       queueContext();
     } else if (state.part) await openPart(state.part, true);
-    status("Unsaved geometry discarded.");
+    status("Changes discarded.");
   });
   $("add-library").onclick = act(async () => {
+    if (importPending) return;
     if (!renderer.triangleCount()) throw Error("Open a model first.");
     if (state.dirty)
       throw Error(
         "Save or discard geometry edits before adding the source to your library. Download STL exports your edited geometry.",
       );
     const fileName = state.part?.fileName || state.file?.name || "imported.stl";
-    let result;
-    if (state.file && localFilesystem)
-      result = await request("tools/call", {
-        name: "cad.addOpenFile",
-        arguments: { fileName },
-      });
-    else {
-      let blob;
-      if (importedSource?.bytes) {
-        let binary = "";
-        for (const byte of new Uint8Array(importedSource.bytes))
-          binary += String.fromCharCode(byte);
-        blob = btoa(binary);
-      } else if (state.file) {
-        const response = await request("resources/read", {
-          uri: state.file.resourceUri,
-          _meta: { "openai/resource": { representation: "blob" } },
+    const sourceAtStart = importedSource;
+    const token = generation;
+    importPending = true;
+    draw();
+    status("Adding to library…");
+    try {
+      let result;
+      if (state.file && localFilesystem)
+        result = await app.callServerTool({
+          name: "cad.addOpenFile",
+          arguments: { fileName },
         });
-        const content = response.contents?.[0];
-        if (!content) throw Error("No source file returned.");
-        if (content.blob) blob = content.blob;
-        else {
-          let binary = "";
-          for (const byte of new TextEncoder().encode(content.text))
-            binary += String.fromCharCode(byte);
-          blob = btoa(binary);
+      else {
+        let bytes: Uint8Array<ArrayBuffer>;
+        if (importedSource?.bytes) {
+          bytes = new Uint8Array(importedSource.bytes);
+        } else if (state.file) {
+          const response = await openai.resources!.read({
+            uri: state.file.resourceUri,
+            representation: "blob",
+          });
+          const content = response.contents?.[0];
+          if (!content) throw Error("No source file returned.");
+          bytes =
+            "blob" in content
+              ? Uint8Array.from(atob(content.blob), (character) =>
+                  character.charCodeAt(0),
+                )
+              : new TextEncoder().encode(content.text);
+        } else {
+          status("This part is already in the library.");
+          return;
         }
-      } else {
-        status("This part is already in the library.");
-        return;
+        let args: { fileName: string; blob?: string; uploadPath?: string };
+        if (uploadUrl) {
+          const url = new URL(uploadUrl);
+          url.searchParams.set("fileName", fileName);
+          const uploaded = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: bytes,
+          });
+          if (!uploaded.ok) throw Error(await uploaded.text());
+          args = { fileName, uploadPath: (await uploaded.json()).uploadPath };
+        } else {
+          let binary = "";
+          for (const byte of bytes) binary += String.fromCharCode(byte);
+          args = { fileName, blob: btoa(binary) };
+        }
+        result = await app.callServerTool({
+          name: "cad.importPart",
+          arguments: args,
+        });
       }
-      result = await request("tools/call", {
-        name: "cad.importPart",
-        arguments: { fileName, blob },
-      });
+      if (result.isError)
+        throw Error(
+          result.content.find((block) => block.type === "text")?.text ||
+            "Import failed",
+        );
+      if (
+        sourceAtStart &&
+        token === generation &&
+        importedSource === sourceAtStart &&
+        result.structuredContent?.part
+      ) {
+        state.part = publicCadPartSchema.parse(result.structuredContent.part);
+        importedSource = null;
+        updateSelection();
+        queueContext();
+      }
+      await toolResult(
+        await app.callServerTool({ name: "cad.listParts", arguments: {} }),
+      );
+      status("Added to library.");
+    } finally {
+      importPending = false;
+      draw();
     }
-    if (result.isError)
-      throw Error(result.content?.[0]?.text || "Import failed");
-    await toolResult(
-      await request("tools/call", { name: "cad.listParts", arguments: {} }),
-    );
-    status("Added to library.");
   });
-  $("units").value = state.units;
-  $("grid").checked = state.grid;
-  $("default-camera").value = state.defaultView;
   camera(state.camera);
-  new ResizeObserver(() => {
+  const bodyObserver = new ResizeObserver(() => {
     draw();
     resize();
-  }).observe(document.body);
+  });
+  bodyObserver.observe(document.body, { box: "border-box" });
   renderLibrary();
   show("library");
   if (parent !== window)
-    request("ui/initialize", {
-      protocolVersion: "2026-01-26",
-      appInfo: { name: "bits-and-bolts", version: "0.1.0" },
-      appCapabilities: {
-        tools: {},
-        availableDisplayModes: ["inline", "fullscreen"],
-      },
-    })
-      .then(async (response) => {
-        if (response.protocolVersion !== "2026-01-26")
-          throw new Error(
-            "Unsupported UI protocol: " + response.protocolVersion,
-          );
+    app
+      .connect()
+      .then(async () => {
+        const host = app.getHostVersion();
+        if (
+          app.getHostContext()?.platform === "desktop" &&
+          (!host?.version ||
+            host.version.localeCompare("26.928.20710", undefined, {
+              numeric: true,
+            }) < 0)
+        ) {
+          applyHost({ ...app.getHostContext(), "openai/deepLink": undefined });
+          document.querySelector("main")!.hidden = true;
+          $("update-required").hidden = false;
+          await app.sendSizeChanged({
+            height: Math.ceil(document.body.getBoundingClientRect().height),
+          });
+          return;
+        }
         state.connected = true;
-        state.capabilities = response.hostCapabilities || {};
-        $("skills").hidden =
-          state.capabilities.experimental?.["openai/skillsDeepLinks"] == null;
-        $("host-file").hidden =
-          state.capabilities.experimental?.["openai/files"] == null;
-        initialDeepLink = response.hostContext?.["openai/deepLink"] || null;
-        const oldNote =
-          response.hostContext?.["openai/modelContext"]?.structuredContent
-            ?.note;
-        if (typeof oldNote === "string") $("note").value = oldNote;
-        applyHost(response.hostContext || {});
-        notify("ui/notifications/initialized");
+        state.capabilities = app.getHostCapabilities() || {};
+        openai.resources?.addUpdateHandler(({ params }) =>
+          resourceUpdated(params),
+        );
+        updateSelection();
+        if (generation === 0)
+          pendingDeepLink = openai.deepLink.getCurrent() || null;
+        applyHost({ ...app.getHostContext(), "openai/deepLink": undefined });
+        queueContext(0);
         resize();
-        status("Connected to " + (response.hostInfo?.name || "host"));
-        const listing = await request("tools/call", {
-          name: "cad.listParts",
-          arguments: {},
-        });
-        await toolResult(listing);
+        status("");
+        // Start loading the library independently of the selected part.
+        catalogTimer = setTimeout(() => {
+          catalogTimer = undefined;
+          void loadCatalog();
+        }, 0);
       })
       .catch(fail);
-  else status("Standalone preview. Host features require an MCP app host.");
 }

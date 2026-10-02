@@ -9,7 +9,7 @@ import {
   OpenAIFormSchema,
   type OpenAIForm,
   type OpenAIFormResult,
-} from "./schema.js";
+} from "../../shared/forms/schema.js";
 
 export type OpenAIFormRequestParams = Omit<
   ElicitRequestFormParams,

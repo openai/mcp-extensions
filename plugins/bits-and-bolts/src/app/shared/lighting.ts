@@ -1,13 +1,24 @@
-import type { Box3, Scene, WebGLRenderer } from "three";
 import {
   AgXToneMapping,
+  type Box3,
   DirectionalLight,
   PCFShadowMap,
   PMREMGenerator,
+  type Scene,
   Sphere,
   SRGBColorSpace,
+  type WebGLRenderer,
 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+export function createStudioEnvironment(renderer: WebGLRenderer) {
+  const room = new RoomEnvironment();
+  const generator = new PMREMGenerator(renderer);
+  const environment = generator.fromScene(room, 0.04, 0.1, 100, { size: 128 });
+  room.dispose();
+  generator.dispose();
+  return environment;
+}
 
 /** Share a fixed studio light rig between the viewer and library previews. */
 export function addStudioLighting(
@@ -15,16 +26,13 @@ export function addStudioLighting(
   renderer: WebGLRenderer,
   bounds: Box3,
   shadowMapSize: number,
+  sharedEnvironment?: ReturnType<typeof createStudioEnvironment>,
 ) {
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = AgXToneMapping;
   renderer.toneMappingExposure = 1;
 
-  const room = new RoomEnvironment();
-  const generator = new PMREMGenerator(renderer);
-  const environment = generator.fromScene(room, 0.04, 0.1, 100, { size: 128 });
-  room.dispose();
-  generator.dispose();
+  const environment = sharedEnvironment ?? createStudioEnvironment(renderer);
   scene.environment = environment.texture;
   scene.environmentIntensity = 0.16;
   // RoomEnvironment is Y-up; CAD models and the light rig are Z-up.
@@ -44,7 +52,7 @@ export function addStudioLighting(
     updateBounds,
     dispose() {
       scene.environment = null;
-      environment.dispose();
+      if (!sharedEnvironment) environment.dispose();
       key.shadow.dispose();
       key.removeFromParent();
       key.target.removeFromParent();

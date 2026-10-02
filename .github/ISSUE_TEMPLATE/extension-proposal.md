@@ -1,10 +1,9 @@
 ---
 name: Extension Proposal
 about: Propose a new extension or revise an existing one!
-title: ''
+title: ""
 labels: proposal
-assignees: ''
-
+assignees: ""
 ---
 
 Introduce yourself and what you’re building

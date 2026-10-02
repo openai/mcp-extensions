@@ -1,7 +1,7 @@
 import { IconSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-import { NonBlankStringSchema } from "../shared/strings.js";
+import { NonBlankStringSchema } from "./strings.js";
 
 export const OpenAIUiQuickActionSchema = z.strictObject({
   title: NonBlankStringSchema,

@@ -61,6 +61,14 @@ async def elicit_form(
         ),
     )
 
+    return validate_form_result(result, schema, requested_schema)
+
+
+def validate_form_result(
+    result: ElicitResult,
+    schema: type[ElicitSchemaModelT],
+    requested_schema: dict[str, Any],
+) -> ElicitationResult[ElicitSchemaModelT]:
     if result.action == "accept":
         if result.content is None:
             raise ValueError("Received an accepted elicitation with no content")
