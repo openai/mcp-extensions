@@ -41,8 +41,6 @@ Install the Bits & Bolts Remote plugin:
 
 ### 1. Add the SDKs
 
-Add the SDKs to your MCP server:
-
 - [TypeScript](typescript/README.md#installation): `@openai/mcp-extensions` for MCP servers and Apps.
 - [Python](python/README.md#installation): `openai-mcp-extensions` for MCP servers.
 
