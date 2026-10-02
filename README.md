@@ -2,6 +2,13 @@
 
 OpenAI MCP Extensions adds ChatGPT-specific capabilities to MCP so developers can build plugins that feel like native, first-class features.
 
+## Try it out
+
+1. Install [Bits & Bolts Remote](https://chatgpt.com/plugins/plugin_asdk_app_6abadab6e7d881919e7491d52c7846e8).
+2. Select the **Bits & Bolts** icon in the sidebar to open the **Parts Library**.
+
+   ![Bits & Bolts Remote selected in the sidebar with the Parts Library open](resources/01-global-library.png)
+
 ## Showcase
 
 ### [Sidebar entrypoints](docs/spec.md#mcp-app-entrypoints)
@@ -27,13 +34,6 @@ Let users search your plugin’s resources from the composer and add references 
 Let users select a CAD part using thumbnail choices.
 
 ![Selecting a CAD part in a Bits & Bolts form](resources/image-picker.gif)
-
-## Try it out
-
-1. Install [Bits & Bolts Remote](https://chatgpt.com/plugins/plugin_asdk_app_6abadab6e7d881919e7491d52c7846e8).
-2. Select the **Bits & Bolts** icon in the sidebar to open the **Parts Library**.
-
-   ![Bits & Bolts Remote selected in the sidebar with the Parts Library open](resources/01-global-library.png)
 
 ## Get started
 
