@@ -19,8 +19,10 @@ import {
 import { z } from "zod/v4";
 
 import {
+  cadPartMetadataSchema,
   cadPreferencesSchema,
   publicCadPartSchema,
+  type PublicCadPart,
 } from "../shared/contracts.js";
 import type { CatalogStore } from "./store.js";
 
@@ -95,23 +97,23 @@ export function registerCadServer<Context = ServerContext>({
     "openai/iconStyle": "monochrome",
   });
   const view = async (
-    data: Record<string, unknown>,
-    includeCatalog = false,
+    data: Record<string, unknown> & { part?: PublicCadPart },
   ) => {
-    const [preferences, parts] = await Promise.all([
-      store.readSettings(),
-      includeCatalog ? store.list() : undefined,
-    ]);
-    return cadResult({
-      ...data,
-      ...(parts === undefined ? {} : { parts }),
-      preferences,
-      settingsLifetime: store.settingsLifetime,
-      ...(assetOrigin
-        ? { uploadUrl: `${assetOrigin}/bits-and-bolts/upload` }
+    return {
+      ...cadResult({
+        ...data,
+        ...(data.part ? { part: cadPartMetadataSchema.parse(data.part) } : {}),
+        preferences: await store.readSettings(),
+        settingsLifetime: store.settingsLifetime,
+        ...(assetOrigin
+          ? { uploadUrl: `${assetOrigin}/bits-and-bolts/upload` }
+          : {}),
+        localFilesystem: __LOCAL_FILESYSTEM__ && store.importPath != null,
+      }),
+      ...(data.part
+        ? { _meta: { previews: { isometric: data.part.previews.isometric } } }
         : {}),
-      localFilesystem: __LOCAL_FILESYSTEM__ && store.importPath != null,
-    });
+    };
   };
   const find = async (id: string) => {
     const part = await store.get(id);
@@ -230,7 +232,7 @@ export function registerCadServer<Context = ServerContext>({
         ui: { resourceUri: UI, visibility: ["app"] },
       },
     },
-    async () => view({ page: "library" }, true),
+    async () => view({ page: "library" }),
   );
   server.registerTool(
     "cad.library",
@@ -241,7 +243,7 @@ export function registerCadServer<Context = ServerContext>({
       annotations: readonly,
       _meta: ui([], THREAD),
     },
-    async () => view({ page: "library" }, true),
+    async () => view({ page: "library" }),
   );
   server.registerTool(
     "cad.tray",
@@ -252,7 +254,7 @@ export function registerCadServer<Context = ServerContext>({
       ...entrypoint,
       _meta: ui([{ type: "thread" }], THREAD),
     },
-    async () => view({ page: "library" }, true),
+    async () => view({ page: "library" }),
   );
   server.registerTool(
     "cad.listParts",
@@ -263,7 +265,13 @@ export function registerCadServer<Context = ServerContext>({
       annotations: readonly,
       _meta: { ui: { visibility: ["app"] } },
     },
-    async () => cadResult({ parts: await store.list() }),
+    async () =>
+      cadResult({
+        parts: (await store.list()).map((part) => ({
+          ...part,
+          previews: { isometric: part.previews.isometric },
+        })),
+      }),
   );
   server.registerTool(
     "cad.search",
@@ -271,10 +279,15 @@ export function registerCadServer<Context = ServerContext>({
       title: "Search CAD parts",
       description: "Find CAD parts in the library.",
       inputSchema: z.object({ query: z.string().default("") }),
-      outputSchema: z.object({ parts: z.array(publicCadPartSchema) }),
+      outputSchema: z.object({ parts: z.array(cadPartMetadataSchema) }),
       annotations: readonly,
     },
-    async ({ query }) => cadResult({ parts: await matching(query) }),
+    async ({ query }) =>
+      cadResult({
+        parts: (await matching(query)).map((part) =>
+          cadPartMetadataSchema.parse(part),
+        ),
+      }),
   );
   server.registerTool(
     "cad.view",

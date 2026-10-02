@@ -9,7 +9,9 @@ import {
 } from "@openai/mcp-extensions/app";
 import {
   partSourceResultSchema,
+  previewImagesSchema,
   publicCadPartSchema,
+  type CadPartMetadata,
   type PublicCadPart,
   type CadPreferences,
 } from "../shared/contracts.js";
@@ -799,7 +801,7 @@ export function startApp() {
           localFilesystem: boolean;
           uploadUrl: string;
           file: FileInfo;
-          part: PublicCadPart;
+          part: CadPartMetadata & { previews?: PublicCadPart["previews"] };
           page: AppState["page"];
           preferences: CadPreferences;
           camera: string;
@@ -833,7 +835,14 @@ export function startApp() {
     // A startup link owns initial routing, but newer user navigation wins.
     if (!initial || (generation === 0 && !pendingDeepLink)) {
       if (data.file || data.part) {
-        const opening = data.file ? openFile(data.file) : openPart(data.part!);
+        const opening = data.file
+          ? openFile(data.file)
+          : openPart({
+              ...data.part!,
+              previews: previewImagesSchema.parse(
+                payload._meta?.previews ?? data.part?.previews ?? {},
+              ),
+            });
         const token = generation;
         await opening;
         if (token !== generation) return;
@@ -1360,7 +1369,7 @@ export function startApp() {
         queueContext(0);
         resize();
         status("");
-        // Let queued initial results supply the catalog before the fallback request.
+        // Start loading the library independently of the selected part.
         catalogTimer = setTimeout(() => {
           catalogTimer = undefined;
           void loadCatalog();

@@ -52,6 +52,10 @@ export const publicCadPartSchema = z.object({
   updatedAt: z.string(),
 });
 export type PublicCadPart = z.infer<typeof publicCadPartSchema>;
+export const cadPartMetadataSchema = publicCadPartSchema.omit({
+  previews: true,
+});
+export type CadPartMetadata = z.infer<typeof cadPartMetadataSchema>;
 
 export const partsResultSchema = z.object({
   parts: z.array(publicCadPartSchema),
