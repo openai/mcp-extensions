@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Annotated, Any, Literal
 
@@ -11,6 +10,7 @@ from mcp.server.mcpserver.context import Context
 from mcp_types import CallToolResult, Icon, ResourceLink, ToolAnnotations
 from pydantic import Field
 
+from openai_mcp_extensions._handlers import call_handler
 from openai_mcp_extensions._models import NonBlankString, OpenAIModel, OpenAIStrictModel
 
 
@@ -55,7 +55,7 @@ class OpenAIMentions:
         self._handler: OpenAIMentionSearchHandler | None = None
 
     def search(self, handler: OpenAIMentionSearchHandler) -> OpenAIMentionSearchHandler:
-        """Register or replace the mention-search handler."""
+        """Register or replace a handler; synchronous handlers run in a worker thread."""
 
         self._handler = handler
         return handler
@@ -72,11 +72,8 @@ class OpenAIMentions:
         ) -> Annotated[CallToolResult, OpenAIMentionSearchResult]:
             params = OpenAIMentionSearchParams(query=query)
             handler = self._handler
-            if handler is None:
-                result = OpenAIMentionSearchResult(items=[])
-            else:
-                handled = handler(params, ctx)
-                result = await handled if inspect.isawaitable(handled) else handled
+            assert handler is not None  # tools() only binds this tool after registration.
+            result = await call_handler(handler, params, ctx)
 
             return CallToolResult(
                 content=[],

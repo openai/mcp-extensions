@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import copy
-import inspect
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Annotated, Any, Generic, Literal, TypeVar, cast
 
-import anyio.to_thread
 from mcp.server.context import CallNext, HandlerResult, ServerRequestContext
 from mcp.server.extension import Extension, ToolBinding
 from mcp.server.mcpserver.context import Context
@@ -23,6 +21,7 @@ from pydantic import (
 )
 from typing_extensions import Self
 
+from openai_mcp_extensions._handlers import call_handler
 from openai_mcp_extensions._models import NonBlankString, OpenAIStrictModel
 
 OPENAI_SETTINGS_CAPABILITY_KEY = "openai/settings"
@@ -252,7 +251,7 @@ class OpenAISettings(Extension, Generic[ValuesT]):
         )
 
         async def read_settings(ctx: Context[Any, Any]) -> CallToolResult:
-            values = await _call_settings_handler(read_handler, ctx)
+            values = await call_handler(read_handler, ctx)
             values = self._schema.model_validate(values.model_dump(by_alias=True), strict=True)
             result = read_result_schema.model_validate(
                 {
@@ -270,7 +269,7 @@ class OpenAISettings(Extension, Generic[ValuesT]):
             supplied = set.model_dump(exclude_unset=True, by_alias=False)
             if not supplied:
                 raise ValueError("Set at least one setting.")
-            values = await _call_settings_handler(update_handler, supplied, ctx)
+            values = await call_handler(update_handler, supplied, ctx)
             values = self._schema.model_validate(values.model_dump(by_alias=True), strict=True)
             result = update_result_schema.model_validate({"values": values})
             return CallToolResult(
@@ -290,16 +289,6 @@ class OpenAISettings(Extension, Generic[ValuesT]):
             ),
             ToolBinding(fn=update_settings, kwargs={"name": self._update_tool}),
         )
-
-
-async def _call_settings_handler(
-    handler: Callable[..., BaseModel | Awaitable[BaseModel]], *args: Any
-) -> BaseModel:
-    if inspect.iscoroutinefunction(handler) or inspect.iscoroutinefunction(handler.__call__):
-        result = handler(*args)
-    else:
-        result = await anyio.to_thread.run_sync(handler, *args)
-    return await result if inspect.isawaitable(result) else result
 
 
 def _omit_default(schema: dict[str, Any]) -> None:
