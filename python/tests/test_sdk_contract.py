@@ -20,7 +20,7 @@ from mcp_types import (
 )
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from openai_mcp_extensions import OpenAIExtensions, OpenAIFileEntrypointInput, OpenAIMentionResource, OpenAIMentionSearchResult, OpenAISettings, OpenAIUiResourceMetadata, OpenAIUiToolMetadata, get_resource_path
+from openai_mcp_extensions import OpenAIExtensions, OpenAIMentionResource, OpenAIMentionSearchResult, OpenAISettings, get_resource_path
 from openai_mcp_extensions.form import elicit_form, file_input, request_form_input, resource_input
 
 

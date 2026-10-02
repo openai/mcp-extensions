@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  OpenAIFileEntrypointInputSchema,
   OpenAIFormSchema,
-  OpenAIPreviewTargetSchema,
-  OpenAIUiToolMetadataSchema,
-  OpenAIUiResourceMetadataSchema,
   createOpenAIFormContentSchema,
   getResourcePath,
 } from "../src/index.js";
