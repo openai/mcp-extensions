@@ -13,7 +13,11 @@ import {
   createMcpHandler,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { OpenAIExtensions, requestFormInput } from "../src/server/index.js";
+import {
+  OpenAIExtensions,
+  OpenAISettingsReadResultSchema,
+  requestFormInput,
+} from "../src/server/index.js";
 
 test("settings and mention search work through the MCP client/server boundary", async (t) => {
   const server = new McpServer({ name: "sdk-contract", version: "1" });
@@ -65,7 +69,10 @@ test("settings and mention search work through the MCP client/server boundary", 
     { visibility: ["app"] },
   );
   const read = await client.callTool({ name: "settings.read", arguments: {} });
-  assert.deepEqual(read.structuredContent?.values, { units: "mm", grid: true });
+  assert.deepEqual(
+    OpenAISettingsReadResultSchema.parse(read.structuredContent).values,
+    { units: "mm", grid: true },
+  );
   const update = await client.callTool({
     name: "settings.update",
     arguments: { set: { grid: false } },
@@ -206,7 +213,11 @@ test("legacy forms exchange extended schemas and validate answers through MCP", 
     }
     assert.deepEqual((await choose()).structuredContent, reply);
     assert.deepEqual(received, [params]);
-    for (const content of [{ source: "file:///other.stl" }, {}]) {
+    const invalidContents: NonNullable<ElicitResult["content"]>[] = [
+      { source: "file:///other.stl" },
+      {},
+    ];
+    for (const content of invalidContents) {
       reply = { action: "accept", content };
       assert.equal((await choose()).isError, true);
     }
@@ -313,7 +324,11 @@ test("MRTR exchanges preserve extended schemas and consume validated retry answe
       },
     },
   });
-  for (const content of [{ source: "file:///other.stl" }, {}]) {
+  const invalidContents: NonNullable<ElicitResult["content"]>[] = [
+    { source: "file:///other.stl" },
+    {},
+  ];
+  for (const content of invalidContents) {
     reply = { action: "accept", content };
     assert.equal((await choose()).isError, true);
   }
