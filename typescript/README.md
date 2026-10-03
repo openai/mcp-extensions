@@ -35,11 +35,13 @@ import { OpenAIExtensions } from "@openai/mcp-extensions/app";
 const app = new App({ name: "my-app", version: "1.0.0" });
 const openaiExtensions = new OpenAIExtensions(app);
 
-app.ontoolresult = (result) => render(result.structuredContent);
+app.addEventListener("toolresult", (result) =>
+  render(result.structuredContent),
+);
 await app.connect();
 ```
 
-Register `app.ontoolresult` before `app.connect()` to render the initial result instead of calling the tool again, which delays rendering and causes visible flicker.
+Register the `toolresult` listener before `app.connect()` to render the initial result instead of calling the tool again, which delays rendering and causes visible flicker.
 
 OpenAI extension categories (`message`, `modelContext`, `files`, and `resources`) are set as fields on `openaiExtensions`. They are undefined until initialization completes. If a given extension is unsupported on the current host, it may remain undefined even after initialization.
 
@@ -69,7 +71,9 @@ function applyHostContext(context: ReturnType<App["getHostContext"]>): void {
 }
 
 app.addEventListener("hostcontextchanged", applyHostContext);
-app.ontoolresult = (result) => render(result.structuredContent);
+app.addEventListener("toolresult", (result) =>
+  render(result.structuredContent),
+);
 await app.connect();
 applyHostContext(app.getHostContext());
 ```

@@ -1,6 +1,6 @@
 # OpenAI MCP Extensions for Python
 
-The Python SDK provides server-side OpenAI extensions for the official MCP Python SDK. Use `@openai/mcp-extensions/app` for MCP App extensions.
+The Python SDK provides server-side OpenAI extensions for the official MCP Python SDK. Use the [TypeScript SDK](../typescript/README.md) for MCP App extensions.
 
 ## Installation
 
