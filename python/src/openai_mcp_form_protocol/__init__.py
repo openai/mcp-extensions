@@ -348,9 +348,7 @@ def is_valid_value(
     pending_uploads: int = 0,
     uploaded_uris: tuple[str, ...] = (),
 ) -> bool:
-    """Validate JSON without coercion or defaults; patterns require another validator."""
-    if field.has_pattern:
-        raise ValueError("Form patterns require an ECMA-262 validator")
+    """Validate JSON without coercion or defaults."""
     return _valid_value(
         field,
         value,
@@ -459,6 +457,8 @@ def _valid_string(field: _StringConstraints, value: str) -> bool:
     if (field.min_length is not None and len(value) < field.min_length) or (
         field.max_length is not None and len(value) > field.max_length
     ):
+        return False
+    if field.pattern is not None and re.search(field.pattern, value) is None:
         return False
     try:
         if field.format == "email":
