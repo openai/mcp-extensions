@@ -1,0 +1,21 @@
+{
+  "name": "sql-query-builder",
+  "version": "0.1.0",
+  "description": "Browse tables, pick columns, and assemble SQL queries with form elicitation.",
+  "author": {
+    "name": "faizannazir"
+  },
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "SQL Query Builder",
+    "shortDescription": "Browse tables and build SQL queries",
+    "longDescription": "List database tables, inspect schemas, pick columns with previews, review saved queries, and assemble SQL through forms with patterns, enums, and numeric limits.",
+    "developerName": "faizannazir",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Read"],
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/icon.svg",
+    "logoDark": "./assets/icon-dark.svg",
+    "defaultPrompt": ["@SQL Query Builder show me the users table."]
+  }
+}

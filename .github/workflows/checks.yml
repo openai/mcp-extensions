@@ -94,6 +94,9 @@ jobs:
       - name: Check CAD plugin regressions
         run: pnpm --filter bits-and-bolts exec node scripts/test.mjs
 
+      - name: Check SQL plugin regressions
+        run: pnpm --filter sql-query-builder exec node scripts/test.mjs
+
       - name: Check Python
         run: |
           ruff check python/src .github/scripts

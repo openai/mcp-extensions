@@ -1,0 +1,35 @@
+{
+  "name": "sql-query-builder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A SQL query builder plugin for OpenAI MCP app and server extensions.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "test": "node ./scripts/test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@openai/mcp-extensions": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.2",
+    "@types/node": "22.19.0",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "esbuild": "^0.28.1",
+    "tailwindcss": "4.3.2",
+    "typescript": "^5.9.3",
+    "vite": "8.1.4"
+  }
+}

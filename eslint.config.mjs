@@ -6,6 +6,7 @@ export default tseslint.config(
   {
     ignores: [
       "**/.venv/**",
+      "**/.local/**",
       "**/coverage/**",
       "**/dist/**",
       "**/node_modules/**",

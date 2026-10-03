@@ -12,8 +12,8 @@
     "format:fix": "prettier --write .",
     "lint": "eslint . --max-warnings 0",
     "types": "pnpm --filter @openai/mcp-extensions types",
-    "plugins:types": "pnpm --filter bits-and-bolts typecheck",
-    "plugins:build": "pnpm --filter bits-and-bolts build",
+    "plugins:types": "pnpm --filter bits-and-bolts typecheck && pnpm --filter sql-query-builder typecheck",
+    "plugins:build": "pnpm --filter bits-and-bolts build && pnpm --filter sql-query-builder build",
     "check": "pnpm format && pnpm lint && pnpm types && pnpm build && pnpm plugins:types && pnpm package:check",
     "package:check": "pnpm --filter @openai/mcp-extensions package:check"
   },
