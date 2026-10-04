@@ -435,7 +435,7 @@ def _valid_value(
         ) and len(set(value)) == len(value)
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return False
-    if field.type == "integer" and not isinstance(value, int):
+    if field.type == "integer" and isinstance(value, float) and not value.is_integer():
         return False
     if isinstance(value, float) and not math.isfinite(value):
         return False
