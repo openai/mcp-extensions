@@ -524,7 +524,8 @@ export function startApp(
           .map((c: any) => c.text)
           .join("\n") || "Tool failed.",
       );
-    const data = payload?.structuredContent;
+    const data =
+      payload?._meta?.["bits-and-bolts/view"] ?? payload?.structuredContent;
     if (!data) return;
     if (data.parts) {
       catalog = data.parts;

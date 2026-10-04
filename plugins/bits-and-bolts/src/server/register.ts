@@ -18,6 +18,7 @@ import {
 } from "../shared/contracts.js";
 import { elicitCadForm, type RequestClient } from "./forms.js";
 import type { CatalogStore } from "./store.js";
+import { createViewResult } from "../shared/view-result.js";
 
 export type CadServerOptions = {
   server: McpServer;
@@ -52,7 +53,7 @@ export function registerCadServer({
   requestMeta = (context) => context._meta,
   wasm,
 }: CadServerOptions) {
-  const UI = "ui://bits-and-bolts/app-v14";
+  const UI = "ui://bits-and-bolts/app-v15";
   const icon = {
     src: "data:image/svg+xml," + encodeURIComponent(iconSvg),
     mimeType: "image/svg+xml",
@@ -63,8 +64,8 @@ export function registerCadServer({
     "openai/ui": { entrypoints },
     "openai/iconStyle": "monochrome",
   });
-  const view = async (data: Record<string, unknown>) =>
-    result({
+  const view = async (data: Parameters<typeof createViewResult>[0]) =>
+    createViewResult({
       ...data,
       preferences: await store.readSettings(),
       settingsLifetime: store.settingsLifetime,
