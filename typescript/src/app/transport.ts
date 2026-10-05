@@ -64,8 +64,13 @@ export function createAppTransport<
         });
       }
     } else if (message.method) {
-      for (const listener of listeners.get(message.method) ?? [])
-        listener((message.params ?? {}) as Payload);
+      for (const listener of listeners.get(message.method) ?? []) {
+        try {
+          listener((message.params ?? {}) as Payload);
+        } catch (error) {
+          reportError(error);
+        }
+      }
     }
   };
   window.addEventListener("message", receive);
