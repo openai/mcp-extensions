@@ -17,7 +17,7 @@ This spec outlines every extension and exactly how it builds on top of the exist
 
 ## Platform Support
 
-This table describes current production support. Web refers to ChatGPT Work in the browser. Classic ChatGPT is outside this table’s scope. Web support on Free is rolling out, and Go support is pending. Mobile support requires app version 1.2026.265 or newer. Asterisks indicate limitations described in the corresponding sections.
+Web refers to ChatGPT Work in the browser. Classic ChatGPT is outside this table’s scope. Web support on Free is rolling out, and Go support is pending. Mobile support requires app version 1.2026.265 or newer. Asterisks indicate limitations described in the corresponding sections.
 
 | Feature                                             | Desktop   | Web                                              | iOS                                 | Android                             |
 | --------------------------------------------------- | --------- | ------------------------------------------------ | ----------------------------------- | ----------------------------------- |
@@ -96,6 +96,10 @@ Global entrypoints expose apps that users can open fullscreen from global naviga
 ```ts
 interface GlobalEntrypoint {
   type: "global";
+  header?: {
+    // Defaults to true when header is provided.
+    enabled?: boolean;
+  };
 }
 ```
 
@@ -127,6 +131,8 @@ interface GlobalEntrypoint {
 #### Global header
 
 ChatGPT reserves a header for apps opened from global entrypoints in desktop and web, providing consistent UI with native features and OpenAI MCP capabilities, like account selection, out of the box.
+
+MCP Apps MAY opt out by setting `header: { enabled: false }`. Without the header, ChatGPT always opens the app using the first account.
 
 MCP Apps MAY declare `theme-color` meta tags in the resource HTML to customize the background. ChatGPT reads these declarations when the app mounts. If omitted, the host's default background is used.
 
@@ -863,17 +869,11 @@ Request:
 
 ## Display Modes
 
-The MCP Apps specification defines [display modes](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#display-modes) to make it explicit where MCP Apps can be rendered and where they are currently rendered.
+The MCP Apps specification defines [display modes](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#display-modes) to specify where MCP Apps can be rendered.
 
 ![Bits & Bolts in inline and fullscreen display modes](https://github.com/user-attachments/assets/46236a5d-0437-4088-9c52-68a904aca7f2)
 
-ChatGPT currently supports `inline` and `fullscreen`, but not `pip`.
-
-ChatGPT uses the `fullscreen` display mode for all entrypoints specified above.
-
-For model-invoked MCP Apps, resource metadata lets ChatGPT select a supported display mode before loading the app, avoiding an inline loading state before opening fullscreen.
-
-For model-invoked apps, `_meta["openai/ui"].availableDisplayModes` on the UI resource content item declares supported modes before initialization. This supplements the [`appCapabilities.availableDisplayModes`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#declaring-support) declaration during initialization, which apps retain to constrain supported modes for an individual app instance.
+[`appCapabilities.availableDisplayModes`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#declaring-support) is available only after the app initializes, which can take time. Set `_meta["openai/ui"].availableDisplayModes` on the UI resource content item so ChatGPT can choose a supported mode immediately.
 
 ### Schema
 
@@ -891,12 +891,12 @@ interface DisplayModes {
 
 ### Behavior Details
 
-The following rules apply to model-invoked MCP Apps:
-
-- Supported modes are the intersection of ChatGPT's supported modes, resource `availableDisplayModes` when present, and initialized `appCapabilities.availableDisplayModes` when present. If neither declaration is present, ChatGPT supports `[inline, fullscreen]`. If there is no common mode, ChatGPT retains its current mode when the host supports it, otherwise selects a host-supported preference or default, and reports the fallback as the sole available mode.
-- `preferredDisplayMode` is a hint independent of mode support. It does not add a supported mode. ChatGPT recognizes supported `inline` and `fullscreen` preferences.
-- ChatGPT selects a supported `preferredDisplayMode` first. Otherwise, it selects `fullscreen` if the resource explicitly lists it and it remains supported, then `inline` if supported, then another supported mode. Omitting both resource fields preserves the default to `inline` when supported.
-- Refreshing resource metadata preserves the user's current display mode while that mode remains supported.
+- ChatGPT supports `inline` and `fullscreen`, but not `pip`.
+- When the model invokes an MCP App, ChatGPT considers `preferredDisplayMode` when choosing the initial display mode.
+- If `availableDisplayModes` is omitted from `_meta["openai/ui"]`, ChatGPT assumes the app supports all ChatGPT display modes.
+- If `availableDisplayModes` includes both `inline` and `fullscreen`, ChatGPT defaults to `fullscreen` unless `preferredDisplayMode` specifies otherwise.
+- If `_meta["openai/ui"]` is omitted entirely, ChatGPT preserves legacy behavior and defaults to `inline`.
+- ChatGPT uses `fullscreen` for all entrypoints.
 
 ### Examples
 
@@ -1154,7 +1154,8 @@ MCP App `initialize` result:
 
 ### Behavior Details
 
-- Messages support the [same content types](#supported-content) as `ui/update-model-context`, except resource links on iOS.
+- `ui/message` supports the [same content types](#supported-content) as `ui/update-model-context`.
+- On iOS, `ui/message` does not support resource links.
 
 ### Titles
 

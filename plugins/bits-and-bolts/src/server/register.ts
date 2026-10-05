@@ -609,7 +609,10 @@ export function registerCadServer<Context = ServerContext>({
         {
           uri: uri.href,
           mimeType: "text/html;profile=mcp-app",
-          text: html.replace("<html", `<html data-surface="${surface}"`),
+          text: html.replace(
+            "<html",
+            `<html data-surface="${surface}" data-persist-library="${!__LOCAL_FILESYSTEM__ && surface === "global"}"`,
+          ),
           _meta: {
             "openai/ui": {
               preferredDisplayMode,

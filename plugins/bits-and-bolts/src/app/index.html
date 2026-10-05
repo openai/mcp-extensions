@@ -20,15 +20,17 @@
       }
       body {
         margin: 0;
-        padding: var(--safe-area-top, env(safe-area-inset-top, 0px))
-          var(--safe-area-right, env(safe-area-inset-right, 0px))
-          var(--safe-area-bottom, env(safe-area-inset-bottom, 0px))
-          var(--safe-area-left, env(safe-area-inset-left, 0px));
         font-size: var(--font-text-md-size, 14px);
         line-height: var(--font-text-md-line-height, 1.5);
         background: var(--background);
         color: var(--foreground);
         -webkit-font-smoothing: antialiased;
+      }
+      .safe-area {
+        padding: var(--safe-area-top, env(safe-area-inset-top, 0px))
+          var(--safe-area-right, env(safe-area-inset-right, 0px))
+          var(--safe-area-bottom, env(safe-area-inset-bottom, 0px))
+          var(--safe-area-left, env(safe-area-inset-left, 0px));
       }
       #update-required {
         min-height: min(100dvh, 480px);
@@ -788,168 +790,184 @@
     </style>
   </head>
   <body>
-    <section
-      id="update-required"
-      role="status"
-      aria-labelledby="update-title"
-      hidden
-    >
-      <h1 id="update-title">Update required</h1>
-      <p>Update ChatGPT or Codex to use Bits &amp; Bolts.</p>
-    </section>
-    <main>
-      <div id="view-toolbar" class="view-toolbar">
-        <button id="back" class="btn btn-ghost">‹ Library</button>
-        <div class="heading">
-          <h1 id="heading">Bits &amp; Bolts</h1>
-        </div>
-        <div class="view-actions">
-          <div id="viewer-actions" class="viewer-actions" hidden>
-            <span id="dirty-indicator" hidden>Unsaved changes</span>
-            <button id="save" class="btn btn-primary" disabled hidden>
-              Save changes
-            </button>
-            <button class="btn" id="download">Export STL</button>
-            <details id="part-tools" class="actions-menu">
-              <summary aria-label="Part actions" title="Part actions">
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path
-                    d="M3 12a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0Z"
-                  />
-                </svg>
-              </summary>
-              <div class="menu">
-                <button class="btn" id="add-library">Add to library</button>
-                <button class="btn" id="reload">Reload file</button>
-                <button class="btn" id="discard">Discard changes</button>
-                <button class="btn" id="open-source" hidden>
-                  Open source file
-                </button>
-                <button class="btn" id="share-all-types" hidden>
-                  Add all context types
-                </button>
-              </div>
-            </details>
-          </div>
-          <button id="view-library" class="btn btn-ghost" hidden>
-            View library
-          </button>
-        </div>
-      </div>
-      <footer><span id="status" role="status"></span></footer>
-      <section id="library" aria-label="Parts library">
-        <div class="library-toolbar">
-          <input
-            class="form-control"
-            id="search"
-            type="search"
-            aria-label="Search parts"
-            placeholder="Search parts"
-          />
-          <span id="part-count" class="muted" aria-live="polite"></span>
-          <button class="btn" id="add-part">Import part</button>
-          <input id="import" type="file" accept=".stl" hidden />
-        </div>
-        <div id="parts"></div>
-        <button class="btn" id="retry-library" hidden>
-          Retry loading library
-        </button>
-        <p class="muted library-caption">
-          Sample parts are for exploration. Verify dimensions before
-          manufacturing.
-        </p>
+    <div class="safe-area">
+      <section
+        id="update-required"
+        role="status"
+        aria-labelledby="update-title"
+        hidden
+      >
+        <h1 id="update-title">Update required</h1>
+        <p>Update ChatGPT or Codex to use Bits &amp; Bolts.</p>
       </section>
-      <section id="viewer" hidden aria-label="Part workspace">
-        <div class="workspace">
-          <div class="model-stage">
-            <div class="viewer-controls" aria-label="View controls">
-              <select
-                class="form-select"
-                id="camera"
-                aria-label="View orientation"
-              >
-                <option value="isometric">Isometric</option>
-              </select>
-              <span class="control-divider"></span>
-              <select class="form-select" id="mode" aria-label="Display style">
-                <option value="solid">Solid</option>
-              </select>
-              <span class="control-divider"></span>
-              <button
-                id="fit"
-                class="btn icon-button btn-ghost"
-                aria-label="Zoom to fit"
-                title="Zoom to fit"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5" />
-                  <rect x="8" y="8" width="8" height="8" rx="1" />
-                </svg>
+      <main>
+        <div id="view-toolbar" class="view-toolbar">
+          <button id="back" class="btn btn-ghost">‹ Library</button>
+          <div class="heading">
+            <h1 id="heading">Bits &amp; Bolts</h1>
+          </div>
+          <div class="view-actions">
+            <div id="viewer-actions" class="viewer-actions" hidden>
+              <span id="dirty-indicator" hidden>Unsaved changes</span>
+              <button id="save" class="btn btn-primary" disabled hidden>
+                Save changes
               </button>
-            </div>
-            <div id="viewport" aria-label="3D part viewer"></div>
-            <div class="stage-caption">
-              <span id="selection"></span
-              ><span class="gesture-hint">Drag to orbit · Scroll to zoom</span>
-            </div>
-          </div>
-          <aside id="inspector" class="inspector" aria-label="Part details">
-            <section class="inspector-section">
-              <h2 class="section-label">Part details</h2>
-              <dl class="properties">
-                <div>
-                  <dt>Overall size</dt>
-                  <dd id="dimensions">—</dd>
-                  <dd id="dimension-note" class="muted" hidden>
-                    Source units assumed to be mm.
-                  </dd>
+              <button class="btn" id="download">Export STL</button>
+              <details id="part-tools" class="actions-menu">
+                <summary aria-label="Part actions" title="Part actions">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 12a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0Z"
+                    />
+                  </svg>
+                </summary>
+                <div class="menu">
+                  <button class="btn" id="add-library">Add to library</button>
+                  <button class="btn" id="reload">Reload file</button>
+                  <button class="btn" id="discard">Discard changes</button>
+                  <button class="btn" id="open-source" hidden>
+                    Open source file
+                  </button>
+                  <button class="btn" id="share-all-types" hidden>
+                    Add all context types
+                  </button>
                 </div>
-                <div>
-                  <dt>Format</dt>
-                  <dd id="model-format">—</dd>
-                </div>
-                <div>
-                  <dt>File</dt>
-                  <dd id="model-file">—</dd>
-                </div>
-              </dl>
-              <details class="part-about">
-                <summary>About this part</summary>
-                <p id="part-description"></p>
               </details>
-            </section>
-            <section id="chat-actions" aria-label="Add view to chat" hidden>
-              <div class="view-context">
-                <div class="view-thumbnail">
-                  <img id="view-preview" alt="Current inspection view" hidden />
-                </div>
-                <div class="view-caption">
-                  <strong>Current view</strong
-                  ><small id="view-caption" class="muted"></small>
-                </div>
-                <button id="share" class="btn" aria-label="Add view to chat">
-                  Add
+            </div>
+            <button id="view-library" class="btn btn-ghost" hidden>
+              View library
+            </button>
+          </div>
+        </div>
+        <footer><span id="status" role="status"></span></footer>
+        <section id="library" aria-label="Parts library">
+          <div class="library-toolbar">
+            <input
+              class="form-control"
+              id="search"
+              type="search"
+              aria-label="Search parts"
+              placeholder="Search parts"
+            />
+            <span id="part-count" class="muted" aria-live="polite"></span>
+            <button class="btn" id="add-part">Import part</button>
+            <input id="import" type="file" accept=".stl" hidden />
+          </div>
+          <div id="parts"></div>
+          <button class="btn" id="retry-library" hidden>
+            Retry loading library
+          </button>
+          <p class="muted library-caption">
+            Sample parts are for exploration. Verify dimensions before
+            manufacturing.
+          </p>
+        </section>
+        <section id="viewer" hidden aria-label="Part workspace">
+          <div class="workspace">
+            <div class="model-stage">
+              <div class="viewer-controls" aria-label="View controls">
+                <select
+                  class="form-select"
+                  id="camera"
+                  aria-label="View orientation"
+                >
+                  <option value="isometric">Isometric</option>
+                </select>
+                <span class="control-divider"></span>
+                <select
+                  class="form-select"
+                  id="mode"
+                  aria-label="Display style"
+                >
+                  <option value="solid">Solid</option>
+                </select>
+                <span class="control-divider"></span>
+                <button
+                  id="fit"
+                  class="btn icon-button btn-ghost"
+                  aria-label="Zoom to fit"
+                  title="Zoom to fit"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5" />
+                    <rect x="8" y="8" width="8" height="8" rx="1" />
+                  </svg>
                 </button>
               </div>
-              <p
-                id="chat-status"
-                class="muted"
-                role="status"
-                aria-live="polite"
-              ></p>
-            </section>
-          </aside>
-        </div>
-      </section>
-    </main>
+              <div id="viewport" aria-label="3D part viewer"></div>
+              <div class="stage-caption">
+                <span id="selection"></span
+                ><span class="gesture-hint"
+                  >Drag to orbit · Scroll to zoom</span
+                >
+              </div>
+            </div>
+            <aside id="inspector" class="inspector" aria-label="Part details">
+              <section class="inspector-section">
+                <h2 class="section-label">Part details</h2>
+                <dl class="properties">
+                  <div>
+                    <dt>Overall size</dt>
+                    <dd id="dimensions">—</dd>
+                    <dd id="dimension-note" class="muted" hidden>
+                      Source units assumed to be mm.
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Format</dt>
+                    <dd id="model-format">—</dd>
+                  </div>
+                  <div>
+                    <dt>File</dt>
+                    <dd id="model-file">—</dd>
+                  </div>
+                </dl>
+                <details class="part-about">
+                  <summary>About this part</summary>
+                  <p id="part-description"></p>
+                </details>
+              </section>
+              <section id="chat-actions" aria-label="Add view to chat" hidden>
+                <div class="view-context">
+                  <div class="view-thumbnail">
+                    <img
+                      id="view-preview"
+                      alt="Current inspection view"
+                      hidden
+                    />
+                  </div>
+                  <div class="view-caption">
+                    <strong>Current view</strong
+                    ><small id="view-caption" class="muted"></small>
+                  </div>
+                  <button id="share" class="btn" aria-label="Add view to chat">
+                    Add
+                  </button>
+                </div>
+                <p
+                  id="chat-status"
+                  class="muted"
+                  role="status"
+                  aria-live="polite"
+                ></p>
+              </section>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
     <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
       <h2 id="unsaved-title">Discard unsaved changes?</h2>
       <p>

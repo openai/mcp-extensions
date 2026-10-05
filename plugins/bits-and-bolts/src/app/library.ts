@@ -12,6 +12,7 @@ export function filterParts(parts: PublicCadPart[], query: string) {
 /** The library owns presentation and loads missing thumbnails one at a time. */
 export function createLibrary({
   openPart,
+  canOpen,
   loadPreviews,
   toggleSelection,
   isSelected,
@@ -19,6 +20,7 @@ export function createLibrary({
   showSelection,
 }: {
   openPart: (part: PublicCadPart) => void | Promise<void>;
+  canOpen: () => boolean;
   loadPreviews: (part: PublicCadPart) => Promise<PreviewImages | undefined>;
   toggleSelection: (part: PublicCadPart) => Promise<void>;
   isSelected: (partId: string) => boolean;
@@ -118,6 +120,7 @@ export function createLibrary({
         const button = document.createElement("button");
         button.className = "btn btn-ghost part-open";
         button.setAttribute("aria-label", `Open ${part.name}`);
+        button.disabled = !canOpen();
         const preview = text("span", "part-preview", "");
         preview.append(
           text("span", "muted", "Open to preview"),

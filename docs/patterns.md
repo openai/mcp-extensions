@@ -26,7 +26,7 @@ For example, see how Bits & Bolts [applies ChatGPT's insets](../plugins/bits-and
 
 ### Display modes
 
-ChatGPT already provides controls for switching between inline and fullscreen, so avoid adding your own. Use `requestDisplayMode` when switching modes is a natural part of another user action.
+Use `requestDisplayMode` to change modes in response to a user interaction, such as opening a selected image fullscreen. Do not add dedicated buttons for changing display modes. ChatGPT provides these out of the box.
 
 Set `preferredDisplayMode` and `availableDisplayModes` in your [resource metadata](spec.md#display-modes) so ChatGPT can choose a display mode before rendering the app.
 
@@ -44,12 +44,12 @@ For example, see how Bits & Bolts [applies ChatGPT's theme and style variables](
 
 Users should feel that the model understands what they see and do in an MCP App. Use the decision table below to keep the user, MCP App, and model aligned on the app's current state.
 
-| Mechanism                                      | When to use it                                                                                                             |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `ui/update-model-context`: `content`           | Attach content the user explicitly selects, such as an item they add to chat.                                              |
+| Mechanism | When to use it |
+| --- | --- |
+| `ui/update-model-context`: `content` | Attach content the user explicitly selects, such as an item they add to chat. |
 | `ui/update-model-context`: `structuredContent` | Provide high-level background context the model needs to understand what has changed this turn, such as a page navigation. |
-| Server-side MCP tools                          | Let the model fetch additional details about changes reported in model context or perform mutations.                       |
-| MCP App tools                                  | Let the model directly interact with the app UI. Currently supported only on desktop.                                      |
+| Server-side MCP tools | Let the model fetch additional details about changes reported in model context or perform mutations. |
+| MCP App tools | Let the model directly interact with the app UI. Currently supported only on desktop. |
 
 For example, see how Bits & Bolts handles a user opening the Yeet keycap:
 
@@ -61,6 +61,28 @@ For example, see how Bits & Bolts handles a user opening the Yeet keycap:
 ![Yeet keycap attached to chat and identified by the model](https://github.com/user-attachments/assets/664fb0a9-64e6-4d2d-ae45-3c750c285358)
 
 ## Entrypoints
+
+### Global entrypoint caching
+
+Consider caching the data needed to render your global entrypoint so it opens immediately on subsequent visits. MCP App local storage is persistent on desktop restart and browser page refresh, so you can show cached results immediately after restarting ChatGPT and refresh them in the background. Your global entrypoint's sidebar tab and widget HTML are already cached by default.
+
+For example, Bits & Bolts restores its cached Parts Library before fetching fresh results. It stores part metadata and isometric previews under `bits-and-bolts:library:v1`:
+
+```ts
+localStorage.setItem(
+  "bits-and-bolts:library:v1",
+  JSON.stringify({
+    parts: parts.map((part) => ({
+      ...part,
+      previews: { isometric: part.previews.isometric },
+    })),
+  }),
+);
+```
+
+[plugins/bits-and-bolts/src/app/controller.ts](../plugins/bits-and-bolts/src/app/controller.ts#L39)
+
+[plugins/bits-and-bolts/src/app/library-cache.ts](../plugins/bits-and-bolts/src/app/library-cache.ts)
 
 ### Global icons
 

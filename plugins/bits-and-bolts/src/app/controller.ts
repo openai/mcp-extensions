@@ -1,5 +1,6 @@
 import { createRenderer } from "./renderers/three.js";
 import { createLibrary, filterParts } from "./library.js";
+import { readLibraryCache, writeLibraryCache } from "./library-cache.js";
 import { App } from "@modelcontextprotocol/ext-apps";
 import { z } from "zod/v4";
 import {
@@ -32,14 +33,18 @@ type AppState = RenderState & {
   subscription: string | null;
 };
 export function startApp() {
-  let catalog: PublicCadPart[] = [];
+  const surface = document.documentElement.dataset.surface;
+  const persistLibrary =
+    document.documentElement.dataset.persistLibrary === "true";
+  const cachedCatalog = persistLibrary ? readLibraryCache() : null;
+  let catalog: PublicCadPart[] = cachedCatalog ?? [];
   let catalogLoaded = false;
   let catalogError = false;
   let catalogRequest: Promise<void> | undefined;
   let catalogRevision = 0;
   let catalogTimer: ReturnType<typeof setTimeout> | undefined;
-  const surface = document.documentElement.dataset.surface;
   const canShare = () =>
+    state.connected &&
     ["widget", "thread", "global"].includes(surface || "") &&
     openai.modelContext != null;
   const canShareAllTypes = () =>
@@ -142,6 +147,7 @@ export function startApp() {
   });
   const library = createLibrary({
     openPart: (part) => openPart(part).catch(fail),
+    canOpen: () => state.connected,
     isSelected: (partId) =>
       selectedParts.some(
         (block) => block._meta?.["bits-and-bolts/partId"] === partId,
@@ -150,9 +156,11 @@ export function startApp() {
     canSelect: () => !contextPending && canShare(),
     toggleSelection: (part) => togglePart(part).catch(fail),
     async loadPreviews(part) {
-      if (!["stl", "3mf"].includes(part.format)) return;
+      if (!state.connected || !["stl", "3mf"].includes(part.format)) return;
       const source = await readPart(part);
       const previews = await renderer.previews(source.format, source.bytes);
+      part.previews = previews;
+      if (persistLibrary) writeLibraryCache(catalog);
       // Display the preview even if persistence is unavailable in this host.
       void app
         .callServerTool({
@@ -387,7 +395,11 @@ export function startApp() {
     library.render(
       catalog,
       $("search").value,
-      catalogLoaded ? "ready" : catalogError ? "error" : "loading",
+      catalogLoaded || cachedCatalog !== null
+        ? "ready"
+        : catalogError
+          ? "error"
+          : "loading",
     );
     $("retry-library").hidden = !catalogError || catalogLoaded;
     if (state.page === "library") queueContext();
@@ -814,6 +826,7 @@ export function startApp() {
       catalogLoaded = true;
       catalogError = false;
       catalog = data.parts;
+      if (persistLibrary) writeLibraryCache(catalog);
       renderLibrary();
     }
     if (data.localFilesystem !== undefined)
@@ -1358,6 +1371,7 @@ export function startApp() {
           return;
         }
         state.connected = true;
+        renderLibrary();
         state.capabilities = app.getHostCapabilities() || {};
         openai.resources?.addUpdateHandler(({ params }) =>
           resourceUpdated(params),
