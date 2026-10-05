@@ -1,1 +1,2 @@
-Always use relative Markdown links for files and sections within this repository.
+- Tests should be high-signal end-to-end examples of major happy and sad paths, avoiding implementation details.
+- Avoid documentation changes unless explicitly requested or clearly outdated by the current change. Make the minimum necessary modification.
