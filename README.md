@@ -2,6 +2,8 @@
 
 OpenAI MCP Extensions adds ChatGPT-specific capabilities to MCP so developers can build plugins that feel like native, first-class features.
 
+We’re closing PR contributions for the MCP extension—please open an issue instead!
+
 ## Showcase
 
 All examples below use the Bits & Bolts plugin, which you can try by [installing the plugin](#0-try-it-out).
