@@ -4,9 +4,7 @@ These patterns complement [spec.md](spec.md) with optional guidance for building
 
 ## Versioning
 
-Older desktop versions may lack the Extensions APIs your app needs. For apps using the extensions introduced at DevDay 2026, use `26.928.20710` as the minimum desktop version. Check it when the app opens from any entrypoint and show an update message on older builds.
-
-Use this minimum version for desktop only. Check ChatGPT's advertised capabilities for individual features, and update compatibility checks when the APIs your app uses change or are deprecated.
+Check the [TypeScript changelog](../typescript/CHANGELOG.md) or [Python changelog](../python/CHANGELOG.md) for spec changes and version requirements. Check ChatGPT's advertised capabilities for the features your app uses, and show an update message when the host is too old.
 
 For example, see how Bits & Bolts [checks the desktop version](../plugins/bits-and-bolts/src/app/controller.ts#L1287) before enabling the app.
 
