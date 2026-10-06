@@ -14,7 +14,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Select all that apply.
+      description: Where did you encounter the issue? Select all that apply.
       options:
         - label: Desktop
         - label: Web
@@ -26,7 +26,7 @@ body:
     id: steps-to-reproduce
     attributes:
       label: Steps to reproduce
-      description: Provide numbered steps that reproduce the issue.
+      description: Provide numbered steps, including a minimal code example or MCP payload if relevant.
     validations:
       required: true
   - type: textarea
@@ -40,7 +40,7 @@ body:
     id: actual-behavior
     attributes:
       label: Actual behavior
-      description: What happened instead?
+      description: What happened instead? Include any error messages.
     validations:
       required: true
   - type: textarea
