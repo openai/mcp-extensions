@@ -49,14 +49,13 @@ Users should feel that the model understands what they see and do in an MCP App.
 | `ui/update-model-context`: `content` | Attach content the user explicitly selects, such as an item they add to chat. |
 | `ui/update-model-context`: `structuredContent` | Provide high-level background context the model needs to understand what has changed this turn, such as a page navigation. |
 | Server-side MCP tools | Let the model fetch additional details about changes reported in model context or perform mutations. |
-| MCP App tools | Let the model directly interact with the app UI. Currently supported only on desktop. |
 
 For example, see how Bits & Bolts handles a user opening the Yeet keycap:
 
 1. The user adds the part as a chat attachment. The app [adds the selected part](../plugins/bits-and-bolts/src/app/controller.ts#L586) as a `content` block and [sends it through `ui/update-model-context`](../plugins/bits-and-bolts/src/app/controller.ts#L651).
 2. As the user navigates or adjusts the view, the app [updates `structuredContent`](../plugins/bits-and-bolts/src/app/controller.ts#L605) with the page, part, camera, and other view details so the model knows what the user is looking at.
 3. If the model needs more information about the part, the server's [`cad.search` tool](../plugins/bits-and-bolts/src/server/register.ts#L271) returns part details and links to notes.
-4. If the user asks to change the view, the model can call the app's [`configure_view` tool](../plugins/bits-and-bolts/src/app/controller.ts#L855) to adjust its camera angle, zoom, and display settings.
+4. If the user asks to change the view, the model can call the server's [`cad.configureView` tool](../plugins/bits-and-bolts/src/server/register.ts#L305) to select a camera preset or render mode. The app applies the returned settings.
 
 ![Yeet keycap attached to chat and identified by the model](https://github.com/user-attachments/assets/664fb0a9-64e6-4d2d-ae45-3c750c285358)
 
