@@ -19,10 +19,10 @@ body:
   - type: textarea
     id: additional-details
     attributes:
-      label: Additional details (optional)
+      label: Additional details
       description: Include relevant examples, workarounds, or environment details.
   - type: textarea
     id: screenshots-video
     attributes:
-      label: Screenshots / video (optional)
+      label: Screenshots / video
       description: Attach screenshots or a recording illustrating your request.
