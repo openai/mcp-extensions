@@ -10,10 +10,10 @@ body:
     validations:
       required: true
   - type: textarea
-    id: wishlist
+    id: request
     attributes:
-      label: Wishlist
-      description: Describe the extension or improvement you would like.
+      label: Request
+      description: Describe the extension you’re proposing and the gap it would fill.
     validations:
       required: true
   - type: textarea
