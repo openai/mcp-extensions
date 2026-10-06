@@ -3,30 +3,26 @@ description: Request an extension, improvement, or clarification.
 labels: [request]
 body:
   - type: textarea
-    id: product
+    id: context
     attributes:
-      label: Product
-      description: Introduce your product, what it does, and who it’s for.
+      label: Context
+      description: Describe what you’re building or trying to do.
     validations:
       required: true
   - type: textarea
     id: request
     attributes:
       label: Request
-      description: Describe the extension you’re proposing and the gap it would fill.
+      description: Describe the problem or missing capability and what would help. Include questions if you’re unsure what is supported.
     validations:
       required: true
   - type: textarea
-    id: use-case
+    id: additional-details
     attributes:
-      label: Use case
-      description: Explain how you would use it in your product.
-    validations:
-      required: true
+      label: Additional details (optional)
+      description: Include relevant examples, workarounds, or environment details.
   - type: textarea
     id: screenshots-video
     attributes:
-      label: Screenshots / video
+      label: Screenshots / video (optional)
       description: Attach screenshots or a recording illustrating your request.
-    validations:
-      required: true
