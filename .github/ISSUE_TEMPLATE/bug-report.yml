@@ -2,17 +2,6 @@ name: Bug report
 description: Report a problem with MCP Extensions.
 body:
   - type: checkboxes
-    id: before-reporting
-    attributes:
-      label: Before reporting
-      options:
-        - label: I have searched existing issues and found no duplicate of this report.
-          required: true
-        - label: I have checked that I am on the latest desktop or mobile build, where applicable.
-          required: true
-        - label: I am presenting my investigation and research in my own words.
-          required: true
-  - type: checkboxes
     id: environment
     attributes:
       label: Environment
@@ -50,3 +39,14 @@ body:
     attributes:
       label: Screenshots / video
       description: Attach screenshots or a recording showing the issue.
+  - type: checkboxes
+    id: before-reporting
+    attributes:
+      label: Before reporting
+      options:
+        - label: I have searched existing issues and found no duplicate of this report.
+          required: true
+        - label: I have checked that I am on the latest desktop or mobile build, where applicable.
+          required: true
+        - label: I am presenting my investigation and research in my own words.
+          required: true
