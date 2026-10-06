@@ -1,6 +1,6 @@
-name: Wishlist
-description: Suggest a new extension or an improvement to an existing one.
-labels: [wishlist]
+name: Request
+description: Request an extension, improvement, or clarification.
+labels: [request]
 body:
   - type: textarea
     id: product
