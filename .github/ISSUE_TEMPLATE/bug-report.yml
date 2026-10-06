@@ -6,6 +6,8 @@ body:
     attributes:
       label: Before reporting
       options:
+        - label: I have searched existing issues and found no duplicate of this report.
+          required: true
         - label: I have checked that I am on the latest desktop or mobile build, where applicable.
           required: true
         - label: I am presenting my investigation and research in my own words.
