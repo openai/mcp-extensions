@@ -1,0 +1,30 @@
+name: Wishlist
+description: Suggest a new extension or an improvement to an existing one.
+labels: [wishlist]
+body:
+  - type: textarea
+    id: product
+    attributes:
+      label: Product
+      description: Introduce your product, what it does, and who it’s for.
+    validations:
+      required: true
+  - type: textarea
+    id: wishlist
+    attributes:
+      label: Wishlist
+      description: Describe the extension or improvement you would like.
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: Explain how you would use it in your product.
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots-video
+    attributes:
+      label: Screenshots / video
+      description: Attach screenshots or a recording illustrating your request.
