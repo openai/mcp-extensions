@@ -7,8 +7,14 @@ assignees: ''
 
 ---
 
-Introduce yourself and what you’re building
+### Product
+
+Introduce your product, what it does, and who it’s for.
 
 ### Wishlist
 
 ### Use case
+
+### Screenshots / video (optional)
+
+Attach screenshots or a recording illustrating your request.
