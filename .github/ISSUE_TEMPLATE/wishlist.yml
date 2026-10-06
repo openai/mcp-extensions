@@ -28,3 +28,5 @@ body:
     attributes:
       label: Screenshots / video
       description: Attach screenshots or a recording illustrating your request.
+    validations:
+      required: true
