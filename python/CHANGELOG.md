@@ -9,17 +9,12 @@
 
 ## [0.1.0](https://github.com/openai/mcp-extensions/compare/python-v0.1.0...python-v0.1.0) (2026-09-29)
 
-DevDay host versions:
 
-- Desktop: `26.928.20755`
-- iOS: `1.2026.265`
-- Android: `1.2026.265`
+### Documentation
 
-Feature availability varies by platform. See [platform support](../docs/spec.md#platform-support).
+* use relative SDK links ([#3](https://github.com/openai/mcp-extensions/issues/3)) ([585bc51](https://github.com/openai/mcp-extensions/commit/585bc5165d07601d3f0673f6156634e9199de7fd))
 
-Changes:
 
-- Released the initial Python SDK for MCP servers.
-- Defined global, thread and file entrypoints, settings and onboarding.
-- Defined display modes, deep links, model context and messages.
-- Defined local file access, composer mentions and extended forms.
+### Miscellaneous Chores
+
+* prepare initial Python and Node releases ([#6](https://github.com/openai/mcp-extensions/issues/6)) ([479487f](https://github.com/openai/mcp-extensions/commit/479487f14f839d9a9fcb083d69fcd31701496c29))

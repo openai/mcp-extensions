@@ -9,17 +9,7 @@
 
 ## [0.1.0](https://github.com/openai/mcp-extensions/compare/node-v0.1.0...node-v0.1.0) (2026-09-29)
 
-DevDay host versions:
 
-- Desktop: `26.928.20755`
-- iOS: `1.2026.265`
-- Android: `1.2026.265`
+### Miscellaneous Chores
 
-Feature availability varies by platform. See [platform support](../docs/spec.md#platform-support).
-
-Changes:
-
-- Released the initial TypeScript SDK for MCP servers and apps.
-- Defined global, thread and file entrypoints, settings and onboarding.
-- Defined display modes, deep links, model context and messages.
-- Defined local file access, composer mentions and extended forms.
+* prepare initial Python and Node releases ([#6](https://github.com/openai/mcp-extensions/issues/6)) ([479487f](https://github.com/openai/mcp-extensions/commit/479487f14f839d9a9fcb083d69fcd31701496c29))

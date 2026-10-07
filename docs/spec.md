@@ -15,6 +15,37 @@ This spec outlines every extension and exactly how it builds on top of the exist
 
 `MCP.<Type>` refers to the corresponding type in the [MCP schema reference](https://modelcontextprotocol.io/specification/2026-07-28/schema).
 
+## Changelog
+
+### Unreleased (0.2.0)
+
+#### API changes
+
+- Add `header.enabled` to [global entrypoints](#global-header) so apps can opt out of the host header.
+- Allow [`ui/message`](#prompt-target-and-send-behavior) to use `send: false` for editable drafts in the active or a new conversation.
+- Advertise [mention search](#composer-at-mentions) through `openai/mentions.searchTool`. Keep the old tool annotation as a deprecated fallback.
+- Specify [multi-round-trip form responses](#multi-round-trip-elicitation), with the extended schema in `_meta["openai/elicitation"].requestedSchema`. Keep legacy forms supported.
+- Make [settings tool](#read-settings-tool) layout `title` optional and deprecated. Use the referenced tool's title.
+
+#### Behavior changes
+
+- Read HTML `theme-color` declarations for [app backgrounds](#global-header).
+- Prefer [fullscreen](#display-modes) when both display modes are declared, unless a preference overrides it. Preserve inline behavior when `openai/ui` metadata is absent.
+
+### 2026-09-29 — Initial release (0.1.0)
+
+DevDay host versions:
+
+- Desktop: `26.928.20755`
+- iOS: `1.2026.265`
+- Android: `1.2026.265`
+
+Feature availability varies by platform. See [platform support](#platform-support).
+
+- Initial extension contracts for global, thread and file entrypoints, settings and onboarding.
+- Defined display modes, deep links, model context and messages.
+- Defined local file access, composer mentions and extended forms.
+
 ## Platform Support
 
 Web refers to ChatGPT Work in the browser. Classic ChatGPT is outside this table’s scope. Web support on Free is rolling out, and Go support is pending. Mobile support requires app version 1.2026.265 or newer. Asterisks indicate limitations described in the corresponding sections.

@@ -4,7 +4,7 @@ These patterns complement [spec.md](spec.md) with optional guidance for building
 
 ## Versioning
 
-Check the [TypeScript changelog](../typescript/CHANGELOG.md) or [Python changelog](../python/CHANGELOG.md) for spec changes and version requirements. Check ChatGPT's advertised capabilities for the features your app uses, and show an update message when the host is too old.
+Check the [spec changelog](spec.md#changelog) for API changes and host versions. Check ChatGPT's advertised capabilities for the features your app uses, and show an update message when the host is too old.
 
 For example, see how Bits & Bolts [checks the desktop version](../plugins/bits-and-bolts/src/app/controller.ts#L1287) before enabling the app.
 
