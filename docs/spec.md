@@ -17,7 +17,7 @@ This spec outlines every extension and exactly how it builds on top of the exist
 
 ## Platform Support
 
-Web refers to ChatGPT Work in the browser. Classic ChatGPT is outside this table’s scope. Web support on Free is rolling out, and Go support is pending. Mobile support requires app version 1.2026.265 or newer. Asterisks indicate limitations described in the corresponding sections.
+This table describes expected support at DevDay launch. Web refers to the Work browser. Classic ChatGPT is excluded. Asterisks indicate platform limitations described in the corresponding sections.
 
 | Feature                                             | Desktop   | Web                                              | iOS                                 | Android                             |
 | --------------------------------------------------- | --------- | ------------------------------------------------ | ----------------------------------- | ----------------------------------- |
