@@ -1,0 +1,21 @@
+name: Issue
+description: Report a problem, request an improvement, or ask a question about MCP Extensions.
+body:
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Describe your issue. You can include code, screenshots, or videos here.
+    validations:
+      required: true
+  - type: checkboxes
+    id: before-reporting
+    attributes:
+      label: Before reporting
+      options:
+        - label: I have searched existing issues and found no duplicate of this report.
+          required: true
+        - label: I have checked that I am on the latest desktop or mobile build, where applicable.
+          required: true
+        - label: I am presenting my investigation and research in my own words.
+          required: true
