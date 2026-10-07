@@ -124,9 +124,7 @@ interface GlobalEntrypoint {
 }
 ```
 
-#### Global header
-
-ChatGPT reserves a header for apps opened from global entrypoints in desktop and web, providing consistent UI with native features and OpenAI MCP capabilities, like account selection, out of the box.
+#### App background
 
 MCP Apps MAY declare `theme-color` meta tags in the resource HTML to customize the background. ChatGPT reads these declarations when the app mounts. If omitted, the host's default background is used.
 
