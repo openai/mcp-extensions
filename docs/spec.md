@@ -124,25 +124,6 @@ interface GlobalEntrypoint {
 }
 ```
 
-#### App background
-
-MCP Apps MAY declare `theme-color` meta tags in the resource HTML to customize the background. ChatGPT reads these declarations when the app mounts. If omitted, the host's default background is used.
-
-Example:
-
-```html
-<meta
-  name="theme-color"
-  content="#f5f7fa"
-  media="(prefers-color-scheme: light)"
-/>
-<meta
-  name="theme-color"
-  content="#18202b"
-  media="(prefers-color-scheme: dark)"
-/>
-```
-
 #### Deep Links
 
 Deep links navigate directly to a particular page within a global entrypoint.
