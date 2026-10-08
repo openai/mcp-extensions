@@ -27,9 +27,9 @@ This table describes expected support at DevDay launch. Web refers to the Work b
 | [Structured settings](#structured-settings)         | Supported | Supported                                        | Supported                           | Supported                           |
 | [Resource display modes](#display-modes)            | Supported | Supported                                        | Supported                           | Supported                           |
 | [MCP App deep links](#deep-links)                   | Supported | Supported                                        | Supported                           | Not supported                       |
-| [Messages](#uimessage-extensions)                   | Supported | Supported                                        | [Supported*](#uimessage-extensions) | [Supported*](#uimessage-extensions) |
+| [Richer message sending](#uimessage-extensions)     | Supported | Supported                                        | [Supported*](#uimessage-extensions) | [Supported*](#uimessage-extensions) |
 | [Plugin onboarding](#plugin-onboarding)             | Supported | Supported                                        | Supported                           | Supported                           |
-| [Model context](#uiupdate-model-context-extensions) | Supported | [Supported*](#uiupdate-model-context-extensions) | [Supported*](#thumbnails)           | Supported                           |
+| [Rich model context](#uiupdate-model-context-extensions) | Supported | [Supported*](#uiupdate-model-context-extensions) | [Supported*](#thumbnails)           | Supported                           |
 | [File opening](#opening-local-files)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
 | [File resources](#filesystem-access)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
 | [Composer at-mentions](#composer-at-mentions)       | Supported | Not supported                                    | Not supported                       | Not supported                       |
