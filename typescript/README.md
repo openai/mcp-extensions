@@ -99,8 +99,6 @@ For a complete React plugin, see [the Bits & Bolts sidebar and file viewer](../p
 
 ## [UI Entrypoints](../docs/spec.md#mcp-app-entrypoints)
 
-> **Deprecated:** `type: "settings"` app entrypoints are retained for compatibility. Use [structured settings](#structured-settings) instead.
-
 ```ts
 import {
   RESOURCE_MIME_TYPE,

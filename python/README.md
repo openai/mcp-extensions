@@ -87,8 +87,6 @@ server = MCPServer(
 
 ## [UI Entrypoints](../docs/spec.md#mcp-app-entrypoints)
 
-> **Deprecated:** `type: "settings"` app entrypoints are retained for compatibility. Use [structured settings](#structured-settings) instead.
-
 ```python
 from mcp.server.apps import APP_MIME_TYPE
 from mcp.server.mcpserver.resources import TextResource
