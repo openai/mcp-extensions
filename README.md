@@ -29,7 +29,7 @@ Let users search your plugin’s resources from the composer and add references 
 
 ![Searching for a CAD part with composer mentions](resources/composer-mentions.gif)
 
-### [Extended forms](docs/spec.md#openai-form-elicitation)
+### [Richer forms](docs/spec.md#openai-form-elicitation)
 
 Let users select a CAD part using thumbnail choices.
 

@@ -29,11 +29,11 @@ This table describes expected support at DevDay launch. Web refers to the Work b
 | [MCP App deep links](#deep-links)                   | Supported | Supported                                        | Supported                           | Not supported                       |
 | [Richer message sending](#uimessage-extensions)     | Supported | Supported                                        | [Supported*](#uimessage-extensions) | [Supported*](#uimessage-extensions) |
 | [Plugin onboarding](#plugin-onboarding)             | Supported | Supported                                        | Supported                           | Supported                           |
-| [Rich model context](#uiupdate-model-context-extensions) | Supported | [Supported*](#uiupdate-model-context-extensions) | [Supported*](#thumbnails)           | Supported                           |
+| [Richer model context](#uiupdate-model-context-extensions) | Supported | [Supported*](#uiupdate-model-context-extensions) | [Supported*](#thumbnails)           | Supported                           |
 | [File opening](#opening-local-files)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
 | [File resources](#filesystem-access)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
 | [Composer at-mentions](#composer-at-mentions)       | Supported | Not supported                                    | Not supported                       | Not supported                       |
-| [OpenAI form elicitation](#openai-form-elicitation) | Supported | [Supported*](#resource-selection)                | Not supported                       | Not supported                       |
+| [Richer forms](#openai-form-elicitation)           | Supported | [Supported*](#resource-selection)                | Not supported                       | Not supported                       |
 
 ## Server Capabilities
 
