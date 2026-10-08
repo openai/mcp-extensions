@@ -37,7 +37,7 @@ Let users select a CAD part using thumbnail choices.
 
 ## Get started
 
-### 1. Add the SDKs
+### 1. Install the SDK
 
 - [TypeScript](typescript/README.md#installation): `@openai/mcp-extensions` for MCP servers and Apps.
 - [Python](python/README.md#installation): `openai-mcp-extensions` for MCP servers.
