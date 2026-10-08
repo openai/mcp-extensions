@@ -50,6 +50,7 @@ Use [Plugin Creator](https://chatgpt.com/plugins/plugin_connector_1p_e1a10c53223
 
 - [docs/spec.md](docs/spec.md) lists all supported extensions.
 - [docs/patterns.md](docs/patterns.md) covers best practices.
+- [Bits & Bolts](plugins/bits-and-bolts/) shows how to integrate extensions in practice.
 
 ### 4. Provide feedback
 
