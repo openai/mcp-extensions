@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 
 from mcp_types import Icon
 from pydantic import Field, JsonValue, StringConstraints
+from typing_extensions import deprecated
 
 from openai_mcp_extensions._models import NonBlankString, OpenAIStrictModel
 
@@ -43,8 +44,9 @@ class OpenAIGlobalEntrypoint(OpenAIStrictModel):
     quick_action: OpenAIUiQuickAction | None = None
 
 
+@deprecated("Use structured settings via openai/settings.", category=None)
 class OpenAISettingsEntrypoint(OpenAIStrictModel):
-    """Open an MCP App from settings with optional searchable terms."""
+    """Deprecated settings app entrypoint, retained for compatibility."""
 
     type: Literal["settings"] = "settings"
     search_terms: list[SearchTerm] | None = None

@@ -24,6 +24,7 @@ export const OpenAIUiEntrypointSchema = z.discriminatedUnion("type", [
   }),
   z.strictObject({
     searchTerms: z.array(z.string().trim().min(1)).optional(),
+    /** @deprecated Use structured settings via openai/settings. */
     type: z.literal("settings"),
   }),
   z.strictObject({ type: z.literal("thread") }),
