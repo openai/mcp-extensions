@@ -51,9 +51,9 @@ Use [Plugin Creator](https://chatgpt.com/plugins/plugin_connector_1p_e1a10c53223
 - [docs/spec.md](docs/spec.md) lists all supported extensions.
 - [docs/patterns.md](docs/patterns.md) covers best practices.
 
-### 4. Propose an extension
+### 4. Provide feedback
 
-Help us help you build better extensions by [submitting an extension proposal](https://github.com/openai/mcp-extensions/issues/new?template=extension-proposal.md).
+Notice any gaps in extensions for your plugin? Submit feedback [here](https://github.com/openai/mcp-extensions/issues/new?template=request.yml).
 
 ## License
 
