@@ -44,7 +44,7 @@ Let users select a CAD part using thumbnail choices.
 
 ### 2. Integrate extensions
 
-Use [Plugin Creator](https://chatgpt.com/plugins/plugin_connector_1p_e1a10c53223481918a42f1510ec46c1e) and ask it about workflows you want in your plugin and how extensions can close those gaps.
+Ask [Plugin Creator](https://chatgpt.com/plugins/plugin_connector_1p_e1a10c53223481918a42f1510ec46c1e) how extensions can jumpstart a new plugin or improve an existing one.
 
 ### 3. Explore supported extensions
 
