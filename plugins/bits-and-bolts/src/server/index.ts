@@ -57,7 +57,7 @@ serveStdio(async () => {
         await readFile(new URL("./occt-import-js.wasm", import.meta.url))
       ).toString("base64"),
     },
-    elicit: (context, params) => elicitCadForm(server.server, context, params),
+    elicit: (context, params) => elicitCadForm(server, context, params),
   });
   return server;
 });

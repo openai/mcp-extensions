@@ -2,17 +2,19 @@
 
 ## 0.2.0 — Unreleased
 
-### Spec API changes
+This release added editable chat drafts and forms that can continue across multiple exchanges. It also updated mention search and settings, migrated TypeScript server helpers to MCP SDK 2, and clarified SDK imports and replacements for older APIs.
 
-- `ui/message`: allow `_meta["openai/message"].send: false` for editable drafts in the active or a new conversation.
-- Mention search: add the server capability `openai/mentions: { searchTool: string }`. Require the referenced tool's `annotations.readOnlyHint: true`. Deprecate `_meta["openai/extensions"]["mentions/search"]: {}` as a fallback when the capability is absent.
-- Multi-round-trip forms: require `elicitation.form` and `extensions["openai/elicitation"].form`. Put the extended schema in `_meta["openai/elicitation"].requestedSchema`, with `{ "type": "object", "properties": {} }` in the core `requestedSchema`. Add TypeScript's `requestFormInput` and Python's `request_form_input`, also exposed as `OpenAIExtensions.request_input`.
-- Settings `kind: "tool"` layout items: make `title` optional, deprecated and ignored. Set the display title on the referenced tool.
+### Spec changes
 
-### SDK-only API changes
+- **Editable chat drafts:** Added `_meta["openai/message"].send: false` support to `ui/message` for appending content to the active draft or opening an editable draft with `target: "new"` on desktop and the Work browser.
+- **Mention search:** Added the server capability `openai/mentions: { searchTool: string }`. The search tool must set `annotations.readOnlyHint: true`. Deprecated `_meta["openai/extensions"]["mentions/search"]: {}`, which remains supported when the capability is absent.
+- **Multi-round-trip forms:** Added forms requiring both client capabilities, `elicitation.form` and `extensions["openai/elicitation"].form`. The form schema goes in `_meta["openai/elicitation"].requestedSchema`, with `{ "type": "object", "properties": {} }` in the core `requestedSchema`. Added TypeScript's `requestFormInput` and Python's `request_form_input`, also available as `OpenAIExtensions.request_input`.
+- **Settings buttons:** Made `title` optional, deprecated and ignored on `openai/settings` layout items with `kind: "tool"`. Set `title` on the referenced tool.
 
-- TypeScript server helpers: accept `McpServer` from `@modelcontextprotocol/server`. Settings and mention handlers receive `ServerContext` instead of SDK 1's `RequestHandlerExtra`. Legacy form helpers now take `(context, params, options?)`.
-- Export shared TypeScript schemas and types from `@openai/mcp-extensions`. Keep the existing `@openai/mcp-extensions/server` exports.
-- Add TypeScript's `OpenAIExtensions.elicitInputLegacy` and Python's `OpenAIExtensions.elicit_input_legacy`. Deprecate `elicitInput` and `elicit_input` as aliases.
-- Deprecate `createAppTransport`. Use `App` from `@modelcontextprotocol/ext-apps` with `OpenAIExtensions`.
-- Remove `type: "settings"` from both SDKs' entrypoint unions and remove Python's `OpenAISettingsEntrypoint`. Use `openai/settings` for structured settings.
+### SDK changes
+
+- **Server SDK:** Migrated TypeScript server helpers to MCP SDK 2. Import `McpServer` from `@modelcontextprotocol/server`. Changed settings and mention handlers to receive `ServerContext` instead of `RequestHandlerExtra`.
+- **Shared imports:** Exported shared TypeScript schemas and types from `@openai/mcp-extensions`. Existing `@openai/mcp-extensions/server` imports remain supported.
+- **Legacy forms:** Added TypeScript's `OpenAIExtensions.elicitInputLegacy` and Python's `OpenAIExtensions.elicit_input_legacy`. Deprecated `elicitInput` and `elicit_input`, which remain supported as aliases. Changed both TypeScript methods to take `(context, params, options?)`.
+- **App transport:** Removed `createAppTransport` and the `@openai/mcp-extensions/app/transport` import. Use `App` from `@modelcontextprotocol/ext-apps` with `OpenAIExtensions`.
+- **Structured settings:** Removed settings entrypoints (`type: "settings"`) from both SDKs and removed Python's `OpenAISettingsEntrypoint`. Declare structured settings with `openai/settings`.

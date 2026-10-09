@@ -16,10 +16,6 @@
     "./server": {
       "types": "./dist/server/index.d.ts",
       "import": "./dist/server/index.js"
-    },
-    "./app/transport": {
-      "types": "./dist/app/transport.d.ts",
-      "import": "./dist/app/transport.js"
     }
   },
   "sideEffects": [
