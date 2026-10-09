@@ -16,5 +16,5 @@ This release added editable chat drafts and forms that can continue across multi
 - **Server SDK:** Migrated TypeScript server helpers to MCP SDK 2. Import `McpServer` from `@modelcontextprotocol/server`. Changed settings and mention handlers to receive `ServerContext` instead of `RequestHandlerExtra`.
 - **Shared imports:** Exported shared TypeScript schemas and types from `@openai/mcp-extensions`. Existing `@openai/mcp-extensions/server` imports remain supported.
 - **Legacy forms:** Added TypeScript's `OpenAIExtensions.elicitInputLegacy` and Python's `OpenAIExtensions.elicit_input_legacy`. Deprecated `elicitInput` and `elicit_input`, which remain supported as aliases. Changed both TypeScript methods to take `(context, params, options?)`.
-- **App transport:** Deprecated `createAppTransport`. Use `App` from `@modelcontextprotocol/ext-apps` with `OpenAIExtensions`.
+- **App transport:** Removed `createAppTransport` and the `@openai/mcp-extensions/app/transport` import. Use `App` from `@modelcontextprotocol/ext-apps` with `OpenAIExtensions`.
 - **Structured settings:** Removed settings entrypoints (`type: "settings"`) from both SDKs and removed Python's `OpenAISettingsEntrypoint`. Declare structured settings with `openai/settings`.
