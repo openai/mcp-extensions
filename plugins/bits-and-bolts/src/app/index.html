@@ -515,7 +515,7 @@
       .actions-menu {
         position: relative;
       }
-      .actions-menu summary {
+      .actions-menu > summary {
         list-style: none;
         display: grid;
         place-items: center;
@@ -523,7 +523,7 @@
         width: 36px;
         height: 36px;
       }
-      .actions-menu summary::-webkit-details-marker {
+      .actions-menu > summary::-webkit-details-marker {
         display: none;
       }
       .menu {
@@ -599,7 +599,7 @@
         font-weight: 400;
         line-height: 20px;
         text-align: left;
-        white-space: normal;
+        white-space: nowrap;
         cursor: pointer;
       }
       .extensions-menu summary {
@@ -813,7 +813,7 @@
         .btn,
         .form-select,
         .form-control,
-        .actions-menu summary,
+        .actions-menu > summary,
         .part-about summary {
           min-height: 44px;
         }
@@ -823,7 +823,7 @@
           font-size: 16px;
         }
         .icon-button,
-        .actions-menu summary,
+        .actions-menu > summary,
         [data-part-id] {
           width: 44px;
           min-height: 44px;
@@ -854,7 +854,8 @@
           top: 48px;
           max-width: calc(100vw - 32px);
         }
-        .menu button {
+        .menu button,
+        .extensions-menu summary {
           min-height: 44px;
         }
         .part-about summary {
