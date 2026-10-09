@@ -29,7 +29,9 @@ const seeds = await Promise.all(
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await Promise.all([
-  buildApp({ localFilesystem: false }).then(({ html }) => writeFile(path.join(output, "app.html"), html)),
+  buildApp({ localFilesystem: false }).then(({ html }) =>
+    writeFile(path.join(output, "app.html"), html),
+  ),
   build({
     entryPoints: ["src/server/remote/index.ts"],
     outfile: path.join(output, "server.js"),
