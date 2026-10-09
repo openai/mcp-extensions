@@ -49,6 +49,7 @@ export type CadServerOptions<Context = ServerContext> = {
   requestMeta: (context: Context) => Record<string, unknown> | undefined;
   wasm: { blob: string } | { text: string };
   assetOrigin?: string;
+  pluginDetailsUrl?: string;
 };
 export const cadImportSchema = z.object({
   fileName: z.string(),
@@ -85,6 +86,9 @@ export function registerCadServer<Context = ServerContext>({
   requestMeta,
   wasm,
   assetOrigin,
+  pluginDetailsUrl = assetOrigin
+    ? "https://chatgpt.com/plugins/plugin_asdk_app_6abadab6e7d881919e7491d52c7846e8"
+    : undefined,
 }: CadServerOptions<Context>) {
   const entrypoint = { icons, annotations: readonly };
   const UI = "ui://bits-and-bolts/global-v35";
@@ -105,6 +109,7 @@ export function registerCadServer<Context = ServerContext>({
         ...(data.part ? { part: cadPartMetadataSchema.parse(data.part) } : {}),
         preferences: await store.readSettings(),
         settingsLifetime: store.settingsLifetime,
+        ...(pluginDetailsUrl ? { pluginDetailsUrl } : {}),
         ...(assetOrigin
           ? { uploadUrl: `${assetOrigin}/bits-and-bolts/upload` }
           : {}),
@@ -189,6 +194,11 @@ export function registerCadServer<Context = ServerContext>({
           { kind: "property", property: "defaultView" },
         ],
       },
+      {
+        kind: "group",
+        title: "Library",
+        items: [{ kind: "tool", tool: "cad.library" }],
+      },
     ],
     read: () => store.readSettings(),
     update: (set) => store.updateSettings(set),
@@ -237,7 +247,7 @@ export function registerCadServer<Context = ServerContext>({
   server.registerTool(
     "cad.library",
     {
-      title,
+      title: "Parts Library",
       description: "Browse and inspect CAD parts in the library.",
       inputSchema: z.object({}),
       annotations: readonly,

@@ -3,9 +3,10 @@
 import { readFile } from "node:fs/promises";
 import { build } from "vite";
 
-export async function buildApp() {
+export async function buildApp({ localFilesystem = true } = {}) {
   const output = await build({
     configFile: false,
+    define: { __LOCAL_FILESYSTEM__: JSON.stringify(localFilesystem) },
     build: {
       write: false,
       target: "es2022",

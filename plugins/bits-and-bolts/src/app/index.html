@@ -568,6 +568,60 @@
       #status {
         overflow-wrap: anywhere;
       }
+      #extensions-walkthrough > summary {
+        width: auto;
+        height: auto;
+        padding: 8px 12px;
+        white-space: nowrap;
+      }
+      .extensions-menu summary {
+        width: auto;
+        height: auto;
+      }
+      .walkthrough-target {
+        outline: 2px solid #ab5eff;
+        outline-offset: 4px;
+      }
+      .extensions-menu {
+        width: 300px;
+        max-height: min(70vh, 600px);
+        overflow-y: auto;
+      }
+      .extensions-menu details {
+        padding-left: 12px;
+      }
+      .extensions-menu summary {
+        padding: 8px;
+        font-weight: 600;
+      }
+      .extensions-menu button {
+        text-align: left;
+        white-space: normal;
+      }
+      .extension-guide {
+        position: fixed;
+        margin: 0;
+        width: 300px;
+        max-width: calc(100vw - 24px);
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--background);
+        color: var(--foreground);
+        box-shadow: 0 8px 24px #0002;
+      }
+      .extension-guide p {
+        margin: 8px 0 12px;
+      }
+      .message-options {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .message-options > label {
+        display: grid;
+        gap: 6px;
+      }
       dialog {
         width: min(440px, calc(100% - 32px));
         border: 1px solid var(--border);
@@ -906,6 +960,10 @@
               aria-label="Search parts"
               placeholder="Search parts"
             />
+            <details id="extensions-walkthrough" class="actions-menu">
+              <summary>Extensions walkthrough</summary>
+              <div class="menu extensions-menu"></div>
+            </details>
             <span id="part-count" class="muted" aria-live="polite"></span>
             <button class="btn btn-primary" id="new-part" hidden>
               Create part
@@ -1032,6 +1090,19 @@
           required
           autofocus
         ></textarea>
+        <div class="message-options">
+          <label
+            >Conversation
+            <select id="message-target" class="form-select">
+              <option value="new">New chat</option>
+              <option value="active">Current chat</option>
+            </select>
+          </label>
+          <label class="form-check">
+            <input id="review-draft" class="form-check-input" type="checkbox" />
+            Review in chat before sending
+          </label>
+        </div>
         <p id="part-prompt-error" role="alert"></p>
         <div class="toolbar">
           <button id="cancel-create-part" class="btn" type="button">

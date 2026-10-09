@@ -1,6 +1,7 @@
 import { createRenderer } from "./renderers/three.js";
 import { createLibrary, filterParts } from "./library.js";
 import { createPointAnnotations } from "./point-annotations.js";
+import { createExtensionsWalkthrough } from "./extensions-walkthrough.js";
 import { readLibraryCache, writeLibraryCache } from "./library-cache.js";
 import { App } from "@modelcontextprotocol/ext-apps";
 import { z } from "zod/v4";
@@ -19,6 +20,8 @@ import {
 } from "../shared/contracts.js";
 import type { RenderState, ModelSource } from "./renderers/types.js";
 import type { ContentBlock } from "@modelcontextprotocol/sdk/types.js";
+declare const __LOCAL_FILESYSTEM__: boolean;
+
 type FileInfo = { name: string; resourceUri: string };
 type AppState = RenderState & {
   part: PublicCadPart | null;
@@ -53,15 +56,17 @@ export function startApp() {
   let importPending = false;
   let localFilesystem = false;
   let uploadUrl: string | undefined;
-  type ElementFor<Id extends string> = Id extends "camera" | "mode"
+  let pluginDetailsUrl: string | undefined;
+  type ElementFor<Id extends string> = Id extends
+    "camera" | "mode" | "message-target"
     ? HTMLSelectElement
     : Id extends "part-prompt"
       ? HTMLTextAreaElement
       : Id extends "create-part-dialog"
         ? HTMLDialogElement
-        : Id extends "search" | "import"
+        : Id extends "search" | "import" | "review-draft"
           ? HTMLInputElement
-          : Id extends "part-tools"
+          : Id extends "part-tools" | "extensions-walkthrough"
             ? HTMLDetailsElement
             : Id extends "unsaved-dialog"
               ? HTMLDialogElement
@@ -839,6 +844,7 @@ export function startApp() {
           part: CadPartMetadata & { previews?: PublicCadPart["previews"] };
           page: AppState["page"];
           preferences: CadPreferences;
+          pluginDetailsUrl?: string;
           camera: string;
           mode: string;
         }>
@@ -861,6 +867,8 @@ export function startApp() {
       (data.page === "library" && data.page !== state.page)
     )
       ensureCanLeave();
+    if (typeof data.pluginDetailsUrl === "string")
+      pluginDetailsUrl = data.pluginDetailsUrl;
     if (data.preferences) {
       state.units = data.preferences.units;
       state.grid = data.preferences.showGrid;
@@ -1071,13 +1079,29 @@ export function startApp() {
   $("retry-library").onclick = act(loadCatalog);
   $("search").oninput = renderLibrary;
   function updateCreatePartForm() {
+    const mobile = state.host.platform === "mobile";
+    const currentChat = state.capabilities.updateModelContext != null;
+    $("message-target").querySelector<HTMLOptionElement>(
+      'option[value="active"]',
+    )!.disabled = !currentChat && !mobile;
+    if (!currentChat && !mobile) $("message-target").value = "new";
+    if (mobile) {
+      $("message-target").value = "active";
+      $("review-draft").checked = false;
+    }
+    $("message-target").disabled = createPartPending || mobile;
+    $("review-draft").disabled = createPartPending || mobile;
     $("new-part").hidden = !state.connected || openai.message == null;
     $("new-part").disabled = createPartPending;
     $("part-prompt").readOnly = createPartPending;
     $("create-part").disabled =
       createPartPending || !$("part-prompt").value.trim();
     $("cancel-create-part").disabled = createPartPending;
-    $("create-part").textContent = createPartPending ? "Creating…" : "Create";
+    $("create-part").textContent = createPartPending
+      ? "Opening…"
+      : $("review-draft").checked
+        ? "Open draft"
+        : "Create";
   }
   async function createPart() {
     const prompt = $("part-prompt").value.trim();
@@ -1095,9 +1119,15 @@ export function startApp() {
             text: `Create a new CAD part with Bits & Bolts: ${prompt}`,
           },
         ],
-        _meta: { "openai/message": { target: "new", send: true } },
+        _meta: {
+          "openai/message": {
+            target: $("message-target").value === "active" ? "active" : "new",
+            send: !$("review-draft").checked,
+          },
+        },
       });
-      if (result.isError) throw Error("Could not start a new chat. Try again.");
+      if (result.isError)
+        throw Error("Could not open the design request. Try again.");
       $("part-prompt").value = "";
       $("create-part-dialog").close();
     } catch (error) {
@@ -1108,10 +1138,17 @@ export function startApp() {
       updateCreatePartForm();
     }
   }
-  $("new-part").onclick = () => {
+  function openCreatePart(options = { target: "new", send: true }) {
+    if (!state.connected || !openai.message)
+      throw Error("This host does not support app messages.");
+    $("message-target").value = options.target;
+    $("review-draft").checked = !options.send;
     $("part-prompt-error").textContent = "";
+    updateCreatePartForm();
     $("create-part-dialog").showModal();
-  };
+  }
+  $("new-part").onclick = () => openCreatePart();
+  $("review-draft").onchange = updateCreatePartForm;
   $("cancel-create-part").onclick = () => $("create-part-dialog").close();
   $("create-part-dialog").oncancel = (event: Event) => {
     if (createPartPending) event.preventDefault();
@@ -1122,6 +1159,83 @@ export function startApp() {
     void createPart();
   };
   $("add-part").onclick = () => $("import").click();
+  function pluginUrl() {
+    if (!pluginDetailsUrl) return undefined;
+    const url = new URL(pluginDetailsUrl);
+    if (state.host.platform === "desktop") {
+      const id = url.pathname.split("/").filter(Boolean)[1];
+      return new URL("codex://plugins/" + encodeURIComponent(id));
+    }
+    return url;
+  }
+  createExtensionsWalkthrough({
+    menu: $("extensions-walkthrough"),
+    openLibrary: () => {
+      ensureCanLeave();
+      showLibrary();
+    },
+    openPart: async () => {
+      ensureCanLeave();
+      await loadCatalog();
+      const part = catalog[0];
+      if (!part) throw Error("No CAD parts are available.");
+      await openPart(part);
+    },
+    openCreatePart,
+    hasActiveConversation: () => state.capabilities.updateModelContext != null,
+    openSourceFile: async () => {
+      if (!__LOCAL_FILESYSTEM__ || !localFilesystem || !openai.files)
+        return false;
+      ensureCanLeave();
+      await loadCatalog();
+      const part = catalog[0];
+      if (!part) throw Error("No CAD parts are available.");
+      await openPart(part);
+      await openSourceFile();
+      return true;
+    },
+    openPluginDetails: async () => {
+      const url = pluginUrl();
+      if (!url) return false;
+      const result = await app.openLink({ url: url.href });
+      if (result.isError) throw Error("Could not open plugin details.");
+      return true;
+    },
+    openDeepLink: async () => {
+      const url = pluginUrl();
+      if (!url) return false;
+      await loadCatalog();
+      const part = catalog[0];
+      if (!part) throw Error("No CAD parts are available.");
+      url.pathname += "/app/cad.browse";
+      url.searchParams.set("path", "/parts/" + part.id);
+      const result = await app.openLink({ url: url.href });
+      if (result.isError) throw Error("Could not open the part link.");
+      return true;
+    },
+    startConversation: async (prompt) => {
+      if (!openai.message)
+        throw Error("This host does not support app messages.");
+      const result = await openai.message.send({
+        role: "user",
+        content: [{ type: "text", text: prompt }],
+        _meta: {
+          "openai/message": {
+            target: state.host.platform === "mobile" ? "active" : "new",
+            send: true,
+          },
+        },
+      });
+      if (result.isError) throw Error("Could not start the conversation.");
+    },
+    runTool: async (name, args = {}) => {
+      ensureCanLeave();
+      const result = await app.callServerTool({ name, arguments: args });
+      await toolResult(result);
+    },
+    fail,
+  });
+
   document.addEventListener("click", (event) => {
     if (!(event.target instanceof Element)) return;
     const menu = $("part-tools");
@@ -1162,7 +1276,7 @@ export function startApp() {
     draw();
     queueContext();
   });
-  $("open-source").onclick = act(async () => {
+  async function openSourceFile() {
     if (!state.part || !localFilesystem)
       throw Error("A local catalog part is required.");
     const result = await app.callServerTool({
@@ -1177,7 +1291,8 @@ export function startApp() {
     const path = result.structuredContent?.path;
     if (typeof path !== "string") throw Error("Source path unavailable.");
     await openai.files!.open(path);
-  });
+  }
+  $("open-source").onclick = act(openSourceFile);
   $("view-library").onclick = act(async () => {
     ensureCanLeave();
     await loadCatalog();
