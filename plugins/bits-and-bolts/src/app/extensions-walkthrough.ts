@@ -73,24 +73,24 @@ export function createExtensionsWalkthrough({
   });
   const features: Section[] = [
     {
-      title: "Entrypoints",
+      title: "MCP App Entrypoints",
       items: [
         {
-          title: "Sidebar library",
+          title: "Global entrypoint",
           open: () =>
             libraryGuide(
               "The sidebar entry opens this Parts Library. It stays available while you work.",
             ),
         },
         {
-          title: "Conversation tray",
+          title: "Thread entrypoint",
           open: () =>
             startConversation(
               "Open the Bits & Bolts Parts Tray beside this conversation.",
             ),
         },
         {
-          title: "File viewer",
+          title: "File extension entrypoint",
           open: () =>
             partGuide(
               "Open an STL, 3MF or STEP file with Bits & Bolts to use its file viewer.",
@@ -111,14 +111,14 @@ export function createExtensionsWalkthrough({
       title: "Structured settings",
       items: [
         {
-          title: "Viewing preferences",
+          title: "Read and update settings",
           open: () =>
             details(
               "Open Bits & Bolts plugin details, then Settings. Change units, the grid or the default view.",
             ),
         },
         {
-          title: "Manage the Parts Library",
+          title: "Tool actions",
           open: () =>
             details(
               "Open Bits & Bolts plugin details, then Settings. Parts Library opens an app modal from the settings layout.",
@@ -142,7 +142,7 @@ export function createExtensionsWalkthrough({
       title: "Plugin onboarding",
       items: [
         {
-          title: "Set up units and grid",
+          title: "Onboarding skill",
           open: () =>
             details(
               "Open Bits & Bolts plugin details and choose Set up. Onboarding asks for units and grid preferences.",
@@ -151,10 +151,10 @@ export function createExtensionsWalkthrough({
       ],
     },
     {
-      title: "Extended model context",
+      title: "ui/update-model-context Extensions",
       items: [
         {
-          title: "Reference parts",
+          title: "Resource links",
           open: () =>
             libraryGuide(
               "Use a part's + button to attach its resource reference to the composer.",
@@ -162,14 +162,14 @@ export function createExtensionsWalkthrough({
             ),
         },
         {
-          title: "Point annotations",
+          title: "Titles and supported content",
           open: () =>
             partGuide(
               "Click a surface point. Include an image, choose a reference part and add a comment. Each point becomes one removable composer group.",
             ),
         },
         {
-          title: "Live view state",
+          title: "Structured content",
           open: () =>
             partGuide(
               "Orbit or zoom the model. The current view and dimensions reach the model as background state without another attachment.",
@@ -179,21 +179,26 @@ export function createExtensionsWalkthrough({
       ],
     },
     {
-      title: "Extended message sending",
+      title: "ui/message Extensions",
       items: [
-        message("Create in this chat", "active", true),
-        message("Create in a new chat", "new", true),
-        message("Draft in this chat", "active", false),
-        message("Draft in a new chat", "new", false),
+        {
+          title: "Prompt target and send behavior",
+          items: [
+            message("Active conversation (send)", "active", true),
+            message("New conversation (send)", "new", true),
+            message("Active conversation (draft)", "active", false),
+            message("New conversation (draft)", "new", false),
+          ],
+        },
       ],
     },
     {
-      title: "Local files",
+      title: "Opening Local Files",
       items: [
         ...(__LOCAL_FILESYSTEM__
           ? [
               {
-                title: "Open a source file",
+                title: "Open local file",
                 open: async () => {
                   if (!(await openSourceFile()))
                     return libraryGuide(
@@ -204,7 +209,7 @@ export function createExtensionsWalkthrough({
             ]
           : []),
         {
-          title: "Read, watch and save files",
+          title: "Filesystem access",
           open: async () => {
             if (!(await openSourceFile()))
               return libraryGuide(
@@ -215,10 +220,10 @@ export function createExtensionsWalkthrough({
       ],
     },
     {
-      title: "Composer mentions",
+      title: "Composer At-Mentions",
       items: [
         {
-          title: "Find a part with @",
+          title: "Mention search",
           open: () =>
             libraryGuide(
               "Type @Bits & Bolts in the composer, then search for a part. Selecting a result attaches its resource reference.",
@@ -227,33 +232,38 @@ export function createExtensionsWalkthrough({
       ],
     },
     {
-      title: "Extended forms",
+      title: "OpenAI Form Elicitation",
       items: [
-        { title: "Thumbnail choices", open: () => runTool("cad.pickFile") },
+        { title: "Option descriptions", open: () => runTool("cad.pickFile") },
+        { title: "Thumbnails", open: () => runTool("cad.pickFile") },
         {
-          title: "Requirements and suggested values",
+          title: "Extended string schema",
+          open: () => runTool("cad.reviewForm"),
+        },
+        {
+          title: "Suggested values",
           open: () => runTool("cad.reviewForm"),
         },
         {
           title: "Resource selection",
           items: [
             {
-              title: "One reference",
+              title: "Single selection",
               open: () =>
                 runTool("cad.pickReferences", { selection: "single" }),
             },
             {
-              title: "Choose several references",
+              title: "Explicit selection",
               open: () =>
                 runTool("cad.pickReferences", { selection: "explicit" }),
             },
             {
-              title: "All references except exclusions",
+              title: "Implicit selection",
               open: () =>
                 runTool("cad.pickReferences", { selection: "implicit" }),
             },
             {
-              title: "Files and folders",
+              title: "Directory selection",
               open: () =>
                 runTool("cad.pickReferences", {
                   selection: "explicit",
