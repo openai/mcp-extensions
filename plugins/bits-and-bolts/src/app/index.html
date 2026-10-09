@@ -574,29 +574,58 @@
         padding: 8px 12px;
         white-space: nowrap;
       }
-      .extensions-menu summary {
-        width: auto;
-        height: auto;
-      }
       .walkthrough-target {
         outline: 2px solid #ab5eff;
         outline-offset: 4px;
       }
       .extensions-menu {
-        width: 300px;
+        top: calc(100% + 6px);
+        width: 320px;
+        max-width: calc(100vw - 32px);
         max-height: min(70vh, 600px);
         overflow-y: auto;
       }
-      .extensions-menu details {
-        padding-left: 12px;
+      .extensions-menu details > details {
+        margin-left: 18px;
       }
-      .extensions-menu summary {
-        padding: 8px;
-        font-weight: 600;
-      }
+      .extensions-menu summary,
       .extensions-menu button {
+        width: 100%;
+        min-height: 36px;
+        height: auto;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 20px;
         text-align: left;
         white-space: normal;
+        cursor: pointer;
+      }
+      .extensions-menu summary {
+        display: grid;
+        grid-template-columns: 12px minmax(0, 1fr);
+        gap: 6px;
+        place-items: center start;
+      }
+      .extensions-menu summary::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        margin-left: 1px;
+        border-right: 1.5px solid currentColor;
+        border-bottom: 1.5px solid currentColor;
+        transform: rotate(-45deg);
+      }
+      .extensions-menu details[open] > summary::before {
+        transform: rotate(45deg);
+      }
+      .extensions-menu button {
+        padding-left: 44px;
+      }
+      .extensions-menu summary:hover,
+      .extensions-menu button:hover {
+        background: var(--stage);
       }
       .extension-guide {
         position: fixed;
