@@ -1,6 +1,6 @@
 {
   "name": "@openai/mcp-extensions",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OpenAI extensions for MCP servers and apps.",
   "type": "module",
   "exports": {
