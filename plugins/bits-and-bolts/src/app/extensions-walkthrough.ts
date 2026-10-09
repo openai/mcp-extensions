@@ -284,17 +284,20 @@ export function createExtensionsWalkthrough({
   });
 
   const render = (items: (Section | Feature)[], parent: HTMLElement) => {
+    const list = document.createElement("ul");
+    parent.append(list);
     for (const item of items) {
+      const node = document.createElement("li");
+      list.append(node);
       if ("items" in item) {
-        const group = document.createElement("details");
-        const label = document.createElement("summary");
+        const label = document.createElement("span");
+        label.className = "walkthrough-node";
         label.textContent = item.title;
-        group.append(label);
-        render(item.items, group);
-        parent.append(group);
+        node.append(label);
+        render(item.items, node);
       } else {
         const button = document.createElement("button");
-        button.className = "btn btn-ghost";
+        button.className = "walkthrough-node";
         button.textContent = item.title;
         button.onclick = async () => {
           menu.open = false;
@@ -327,7 +330,7 @@ export function createExtensionsWalkthrough({
             fail(error);
           }
         };
-        parent.append(button);
+        node.append(button);
       }
     }
   };
