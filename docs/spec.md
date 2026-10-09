@@ -19,20 +19,20 @@ This spec outlines every extension and exactly how it builds on top of the exist
 
 This table describes expected support at DevDay launch. Web refers to the Work browser. Classic ChatGPT is excluded. Asterisks indicate platform limitations described in the corresponding sections.
 
-| Feature                                                    | Desktop   | Web                                              | iOS                                 | Android                             |
-| ---------------------------------------------------------- | --------- | ------------------------------------------------ | ----------------------------------- | ----------------------------------- |
-| [Global entrypoint](#global-entrypoint)                    | Supported | Supported                                        | Supported                           | Supported                           |
-| [Thread entrypoint](#thread-entrypoint)                    | Supported | Supported                                        | Supported                           | Supported                           |
-| [File entrypoint](#file-extension-entrypoint)              | Supported | Not supported                                    | Not supported                       | Not supported                       |
-| [Structured settings](#structured-settings)                | Supported | Supported                                        | Supported                           | Supported                           |
-| [Resource display modes](#display-modes)                   | Supported | Supported                                        | Supported                           | Supported                           |
-| [MCP App deep links](#deep-links)                          | Supported | Supported                                        | Supported                           | Not supported                       |
+| Feature                                                      | Desktop   | Web                                              | iOS                                 | Android                             |
+| ------------------------------------------------------------ | --------- | ------------------------------------------------ | ----------------------------------- | ----------------------------------- |
+| [Global entrypoint](#global-entrypoint)                      | Supported | Supported                                        | Supported                           | Supported                           |
+| [Thread entrypoint](#thread-entrypoint)                      | Supported | Supported                                        | Supported                           | Supported                           |
+| [File entrypoint](#file-extension-entrypoint)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [Structured settings](#structured-settings)                  | Supported | Supported                                        | Supported                           | Supported                           |
+| [Resource display modes](#display-modes)                     | Supported | Supported                                        | Supported                           | Supported                           |
+| [MCP App deep links](#deep-links)                            | Supported | Supported                                        | Supported                           | Not supported                       |
 | [Extended message sending](#uimessage-extensions)            | Supported | Supported                                        | [Supported*](#uimessage-extensions) | [Supported*](#uimessage-extensions) |
-| [Plugin onboarding](#plugin-onboarding)                    | Supported | Supported                                        | Supported                           | Supported                           |
+| [Plugin onboarding](#plugin-onboarding)                      | Supported | Supported                                        | Supported                           | Supported                           |
 | [Extended model context](#uiupdate-model-context-extensions) | Supported | [Supported*](#uiupdate-model-context-extensions) | [Supported*](#thumbnails)           | Supported                           |
-| [File opening](#opening-local-files)                       | Supported | Not supported                                    | Not supported                       | Not supported                       |
-| [File resources](#filesystem-access)                       | Supported | Not supported                                    | Not supported                       | Not supported                       |
-| [Composer at-mentions](#composer-at-mentions)              | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [File opening](#opening-local-files)                         | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [File resources](#filesystem-access)                         | Supported | Not supported                                    | Not supported                       | Not supported                       |
+| [Composer at-mentions](#composer-at-mentions)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
 | [Extended forms](#openai-form-elicitation)                   | Supported | [Supported*](#resource-selection)                | Not supported                       | Not supported                       |
 
 ## Server Capabilities
