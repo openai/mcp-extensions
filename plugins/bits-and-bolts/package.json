@@ -11,7 +11,9 @@
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "build:plugin:dev": "node ./scripts/dev.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build:remote": "node scripts/build-remote.mjs",
+    "start:remote": "node .local/remote/server.js"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.1",
@@ -21,7 +23,8 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "three": "^0.185.1",
-    "zod": "4.4.3"
+    "zod": "4.4.3",
+    "@modelcontextprotocol/server": "^2.0.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.2",

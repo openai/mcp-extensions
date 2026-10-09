@@ -1,48 +1,15 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { McpServer, ServerContext } from "@modelcontextprotocol/server";
 import {
-  IconSchema,
-  ResourceLinkSchema,
-  type ServerNotification,
-  type ServerRequest,
-} from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
+  OPENAI_MENTIONS_CAPABILITY_KEY,
+  OpenAIMentionSearchParamsSchema,
+  OpenAIMentionSearchResultSchema,
+  type OpenAIMentionSearchParams,
+  type OpenAIMentionSearchResult,
+} from "../shared/mentions.js";
 
-import { NonBlankStringSchema } from "../shared/strings.js";
-
-export const OpenAIMentionResourceSchema = z.strictObject({
-  icons: z.array(IconSchema).optional(),
-  resourceUri: NonBlankStringSchema,
-  subtitle: NonBlankStringSchema.optional(),
-  title: NonBlankStringSchema,
-  type: z.literal("resource"),
-});
-export const OpenAIMentionItemSchema = z.discriminatedUnion("type", [
-  ResourceLinkSchema,
-  OpenAIMentionResourceSchema,
-]);
-export const OpenAIMentionSearchParamsSchema = z.object({
-  query: z.string(),
-});
-export const OpenAIMentionSearchResultSchema = z.strictObject({
-  items: z.array(OpenAIMentionItemSchema),
-});
-
-/** One MCP resource returned from mention search. */
-export type OpenAIMentionResource = z.infer<typeof OpenAIMentionResourceSchema>;
-/** One result returned from mention search. */
-export type OpenAIMentionItem = z.infer<typeof OpenAIMentionItemSchema>;
-/** Request payload for Codex mention search. */
-export type OpenAIMentionSearchParams = z.infer<
-  typeof OpenAIMentionSearchParamsSchema
->;
-/** Response payload for Codex mention search. */
-export type OpenAIMentionSearchResult = z.infer<
-  typeof OpenAIMentionSearchResultSchema
->;
 export type OpenAIMentionSearchHandler = (
   params: OpenAIMentionSearchParams,
-  extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
+  context: ServerContext,
 ) => OpenAIMentionSearchResult | Promise<OpenAIMentionSearchResult>;
 /** Mention-search extensions exposed for one MCP server instance. */
 export type OpenAIMentions = {
@@ -50,7 +17,7 @@ export type OpenAIMentions = {
 };
 
 export function createMentions(
-  server: Pick<McpServer, "registerTool">,
+  server: Pick<McpServer, "registerTool" | "server">,
 ): OpenAIMentions {
   let mentionSearchHandler: OpenAIMentionSearchHandler | null = null;
   let mentionsRegistered = false;
@@ -58,6 +25,11 @@ export function createMentions(
   return {
     setHandler: (handler) => {
       if (!mentionsRegistered) {
+        if (server.server.transport) {
+          throw new Error(
+            "Register mention search before connecting the server.",
+          );
+        }
         server.registerTool(
           "search_mentions",
           {
@@ -69,14 +41,19 @@ export function createMentions(
               ui: { visibility: ["app"] },
             },
           },
-          async (params, extra) => ({
+          async (params, context) => ({
             content: [],
             structuredContent:
               mentionSearchHandler == null
                 ? { items: [] }
-                : await mentionSearchHandler(params, extra),
+                : await mentionSearchHandler(params, context),
           }),
         );
+        const capability = { searchTool: "search_mentions" };
+        server.server.registerCapabilities({
+          extensions: { [OPENAI_MENTIONS_CAPABILITY_KEY]: capability },
+          experimental: { [OPENAI_MENTIONS_CAPABILITY_KEY]: capability },
+        });
         mentionsRegistered = true;
       }
       mentionSearchHandler = handler;

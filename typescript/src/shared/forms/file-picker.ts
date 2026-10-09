@@ -1,4 +1,4 @@
-import { ResourceSchema } from "@modelcontextprotocol/sdk/types.js";
+import { ResourceSchema } from "@modelcontextprotocol/core";
 import { z } from "zod";
 
 import { arrayFieldShape, stringFieldSchema } from "./fields.js";

@@ -3,9 +3,11 @@
 from openai_mcp_extensions.extensions import OpenAIExtensions
 from openai_mcp_extensions.form import OPENAI_ELICITATION_METHOD
 from openai_mcp_extensions.mentions import (
+    OPENAI_MENTIONS_CAPABILITY_KEY,
     OpenAIMentionItem,
     OpenAIMentionResource,
     OpenAIMentions,
+    OpenAIMentionsCapability,
     OpenAIMentionSearchHandler,
     OpenAIMentionSearchParams,
     OpenAIMentionSearchResult,
@@ -34,7 +36,6 @@ from openai_mcp_extensions.settings import (
 from openai_mcp_extensions.ui import (
     OpenAIFileEntrypoint,
     OpenAIGlobalEntrypoint,
-    OpenAISettingsEntrypoint,
     OpenAIThreadEntrypoint,
     OpenAIUiEntrypoint,
     OpenAIUiQuickAction,
@@ -42,8 +43,11 @@ from openai_mcp_extensions.ui import (
     OpenAIUiResourceMetadata,
     OpenAIUiToolMetadata,
 )
+from openai_mcp_form_protocol import McpAppToolTarget, PreviewTarget
 
 __all__ = [
+    "McpAppToolTarget",
+    "PreviewTarget",
     "OPENAI_SETTINGS_CAPABILITY_KEY",
     "OpenAISettings",
     "OpenAISettingsFieldPresentation",
@@ -68,9 +72,10 @@ __all__ = [
     "OpenAIMentionSearchParams",
     "OpenAIMentionSearchResult",
     "OpenAIMentions",
+    "OPENAI_MENTIONS_CAPABILITY_KEY",
+    "OpenAIMentionsCapability",
     "OpenAIResourceMetadata",
     "OpenAIResourceToolCallMetadata",
-    "OpenAISettingsEntrypoint",
     "OpenAIThreadEntrypoint",
     "OpenAIUiEntrypoint",
     "OpenAIUiQuickAction",

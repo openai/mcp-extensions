@@ -10,6 +10,7 @@ export type AppMessage = {
   error?: { code: number; message: string };
 };
 
+/** @deprecated Use App from @modelcontextprotocol/ext-apps with OpenAIExtensions instead. */
 export function createAppTransport<
   Payload extends Record<string, unknown> = Record<string, unknown>,
 >() {
@@ -63,8 +64,13 @@ export function createAppTransport<
         });
       }
     } else if (message.method) {
-      for (const listener of listeners.get(message.method) ?? [])
-        listener((message.params ?? {}) as Payload);
+      for (const listener of listeners.get(message.method) ?? []) {
+        try {
+          listener((message.params ?? {}) as Payload);
+        } catch (error) {
+          reportError(error);
+        }
+      }
     }
   };
   window.addEventListener("message", receive);

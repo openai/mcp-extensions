@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
-import { constants } from "node:fs";
-import { mkdir, open, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -34,7 +33,6 @@ const manifestSchema = z.object({
 export type CadPart = z.infer<typeof persistedCadPartSchema>;
 type CadManifest = z.infer<typeof manifestSchema>;
 const bundledModelVersion = 6;
-const maxImportBytes = 32 * 1024 * 1024;
 /** Only known, untouched bundled models can be replaced. */
 const legacyModelHashes = new Map(Object.entries(previousHashes));
 
@@ -224,7 +222,7 @@ export async function importPart({
   if (bytes.byteLength === 0) {
     throw new Error("The selected CAD file is empty.");
   }
-  if (bytes.byteLength > maxImportBytes) {
+  if (bytes.byteLength > 32 * 1024 * 1024) {
     throw new Error(
       "The selected CAD file is larger than the 32 MiB import limit.",
     );
@@ -266,58 +264,17 @@ export async function importPartFromPath(
   filePath: string,
   fileName?: string,
 ): Promise<CadPart> {
-  // Open once so validation and reading refer to the same file. Nonblocking
-  // mode lets us reject a FIFO without waiting for a writer during open.
-  const source = await open(
-    filePath,
-    constants.O_RDONLY | constants.O_NONBLOCK,
-  );
-  let bytes: Buffer;
-  try {
-    const fileStats = await source.stat();
-    if (!fileStats.isFile()) {
-      throw new Error("The selected CAD source is not a file.");
-    }
-    if (fileStats.size > maxImportBytes) {
-      throw new Error(
-        "The selected CAD file is larger than the 32 MiB import limit.",
-      );
-    }
-    // The opened file can still grow. Read at most the limit plus one byte,
-    // rather than trusting its earlier size or reading to an unbounded EOF.
-    const chunks: Array<Buffer> = [];
-    let total = 0;
-    while (total <= maxImportBytes) {
-      const chunk = Buffer.alloc(
-        Math.min(64 * 1024, maxImportBytes + 1 - total),
-      );
-      // Fill each chunk across short reads so tiny reads cannot retain a full
-      // allocation apiece.
-      let used = 0;
-      while (used < chunk.length) {
-        const { bytesRead } = await source.read(
-          chunk,
-          used,
-          chunk.length - used,
-        );
-        if (bytesRead === 0) break;
-        used += bytesRead;
-      }
-      chunks.push(chunk.subarray(0, used));
-      total += used;
-      if (used < chunk.length) break;
-    }
-    if (total > maxImportBytes) {
-      throw new Error(
-        "The selected CAD file is larger than the 32 MiB import limit.",
-      );
-    }
-    bytes = Buffer.concat(chunks, total);
-  } finally {
-    await source.close();
+  const fileStats = await stat(filePath);
+  if (!fileStats.isFile()) {
+    throw new Error("The selected CAD source is not a file.");
+  }
+  if (fileStats.size > 32 * 1024 * 1024) {
+    throw new Error(
+      "The selected CAD file is larger than the 32 MiB import limit.",
+    );
   }
   return importPart({
-    bytes,
+    bytes: await readFile(filePath),
     fileName: fileName ?? path.basename(filePath),
     sourceLabel: `Workspace / ${path.basename(filePath)}`,
   });

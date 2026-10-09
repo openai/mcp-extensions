@@ -1,3 +1,5 @@
+/* global process */
+
 import {
   access,
   copyFile,
@@ -8,7 +10,6 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
-import process from "node:process";
 import { parseArgs } from "node:util";
 
 import { build } from "esbuild";
@@ -50,6 +51,7 @@ await Promise.all([
   ),
   build({
     bundle: true,
+    define: { __LOCAL_FILESYSTEM__: "true" },
     entryPoints: ["src/server/index.ts"],
     format: "esm",
     outfile: `${outputRoot}/server.js`,

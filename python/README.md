@@ -95,7 +95,6 @@ from mcp_types import Icon
 from openai_mcp_extensions import (
     OpenAIFileEntrypoint,
     OpenAIGlobalEntrypoint,
-    OpenAISettingsEntrypoint,
     OpenAIThreadEntrypoint,
     OpenAIUiQuickAction,
     OpenAIUiQuickActionToolTarget,
@@ -168,15 +167,15 @@ from mcp.server.mcpserver.context import Context
 from mcp_types import ResourceLink
 
 from openai_mcp_extensions import (
-    OpenAIExtensions,
+    OpenAIMentions,
     OpenAIMentionSearchParams,
     OpenAIMentionSearchResult,
 )
 
-openai_extensions = OpenAIExtensions()
+mentions = OpenAIMentions()
 
 
-@openai_extensions.mentions.search
+@mentions.search
 async def search_mentions(
     params: OpenAIMentionSearchParams,
     context: Context[Any, Any],
@@ -191,12 +190,44 @@ async def search_mentions(
     )
 
 
-server = MCPServer("issue-tracker", extensions=[openai_extensions])
+server = MCPServer("issue-tracker", extensions=[mentions])
 ```
 
 ## [Form Elicitation](../docs/spec.md#openai-form-elicitation)
 
-**NOTE:** OpenAI-registered MCP servers require [MRTR for form elicitation](../docs/spec.md#openai-form-elicitation). Direct MCP connections still support legacy forms through `elicit_input`, which does not implement MRTR.
+### Multi-round-trip Requests
+
+For MCP `2026-07-28` or later, register the middleware and return pending input requests:
+
+```python
+from typing import Any
+
+from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.context import Context
+from mcp_types import CallToolResult, InputRequiredResult
+from pydantic import BaseModel
+
+from openai_mcp_extensions import OpenAIExtensions
+
+extensions = OpenAIExtensions()
+server = MCPServer("forms", middleware=[extensions.middleware])
+
+
+class ProjectForm(BaseModel):
+    code: str
+
+
+@server.tool()
+async def choose_project(context: Context[Any, Any]) -> CallToolResult | InputRequiredResult:
+    result = extensions.request_input(
+        context, key="project", message="Enter a project code", schema=ProjectForm
+    )
+    if isinstance(result, InputRequiredResult):
+        return result
+    if result.action != "accept":
+        return CallToolResult(content=[], structured_content={"action": result.action})
+    return CallToolResult(content=[], structured_content=result.data.model_dump())
+```
 
 ### Suggested Values
 
@@ -279,7 +310,7 @@ class PresentationForm(BaseModel):
 
 @server.tool()
 async def choose_images(context: Context[Any, Any]) -> ElicitationResult[PresentationForm]:
-    return await openai_extensions.elicit_input(
+    return await openai_extensions.elicit_input_legacy(
         context,
         mode="form",
         message="Choose reference images",

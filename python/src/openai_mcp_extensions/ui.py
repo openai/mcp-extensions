@@ -10,7 +10,6 @@ from pydantic import Field, JsonValue, StringConstraints
 from openai_mcp_extensions._models import NonBlankString, OpenAIStrictModel
 
 FileExtension = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r"^\.")]
-SearchTerm = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class OpenAIUiQuickActionToolTarget(OpenAIStrictModel):
@@ -43,13 +42,6 @@ class OpenAIGlobalEntrypoint(OpenAIStrictModel):
     quick_action: OpenAIUiQuickAction | None = None
 
 
-class OpenAISettingsEntrypoint(OpenAIStrictModel):
-    """Open an MCP App from settings with optional searchable terms."""
-
-    type: Literal["settings"] = "settings"
-    search_terms: list[SearchTerm] | None = None
-
-
 class OpenAIThreadEntrypoint(OpenAIStrictModel):
     """Open an MCP App from a conversation side panel."""
 
@@ -57,10 +49,7 @@ class OpenAIThreadEntrypoint(OpenAIStrictModel):
 
 
 OpenAIUiEntrypoint = Annotated[
-    OpenAIFileEntrypoint
-    | OpenAIGlobalEntrypoint
-    | OpenAISettingsEntrypoint
-    | OpenAIThreadEntrypoint,
+    OpenAIFileEntrypoint | OpenAIGlobalEntrypoint | OpenAIThreadEntrypoint,
     Field(discriminator="type"),
 ]
 

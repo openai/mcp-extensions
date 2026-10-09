@@ -1,5 +1,11 @@
-import type { Mesh, PerspectiveCamera } from "three";
-import { Box3, MathUtils, Sphere, Vector3 } from "three";
+import {
+  Box3,
+  MathUtils,
+  type Mesh,
+  type PerspectiveCamera,
+  Sphere,
+  Vector3,
+} from "three";
 
 export type ViewPreset =
   "isometric" | "front" | "back" | "left" | "right" | "top" | "bottom";

@@ -82,6 +82,8 @@ async function importStepInWorker(
   buffer: ArrayBuffer,
   readWasm: () => Promise<Uint8Array>,
 ): Promise<StepWorkerResponse> {
+  // Parsing borrows the source; imports and discard still need its original bytes.
+  const workerBuffer = buffer.slice(0);
   const wasmBinary = await readWasm();
   const wasmBuffer = wasmBinary.slice().buffer as ArrayBuffer;
   return new Promise((resolve, reject) => {
@@ -102,7 +104,6 @@ async function importStepInWorker(
       },
       { once: true },
     );
-    const workerBuffer = buffer.slice(0);
     worker.postMessage({ buffer: workerBuffer, wasmBinary: wasmBuffer }, [
       workerBuffer,
       wasmBuffer,

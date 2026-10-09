@@ -91,6 +91,13 @@ jobs:
       - name: Check TypeScript
         run: pnpm check
 
+      - name: Test SDKs
+        run: |
+          pnpm --filter @openai/mcp-extensions test
+          pnpm --filter @openai/mcp-extensions test:package
+          python -m pytest python/tests
+          python python/scripts/package_smoke.py
+
       - name: Check CAD plugin regressions
         run: pnpm --filter bits-and-bolts exec node scripts/test.mjs
 

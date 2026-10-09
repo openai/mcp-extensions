@@ -1,218 +1,1158 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>Bits &amp; Bolts</title>
+    <!-- APP_STYLES -->
     <style>
+      :root {
+        --stage: var(--color-background-secondary, var(--background));
+      }
       * {
         box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        padding: 16px;
-        font: 14px var(--font-sans, system-ui);
-        background: var(--color-background-primary, Canvas);
-        color: var(--color-text-primary, CanvasText);
       }
       [hidden] {
         display: none !important;
       }
-      header {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        margin-bottom: 16px;
-      }
-      h1 {
-        font-size: 19px;
+      body {
         margin: 0;
-        flex: 1;
+        font-size: var(--font-text-md-size, 14px);
+        line-height: var(--font-text-md-line-height, 1.5);
+        background: var(--background);
+        color: var(--foreground);
+        -webkit-font-smoothing: antialiased;
+      }
+      .safe-area {
+        padding: var(--safe-area-top, env(safe-area-inset-top, 0px))
+          var(--safe-area-right, env(safe-area-inset-right, 0px))
+          var(--safe-area-bottom, env(safe-area-inset-bottom, 0px))
+          var(--safe-area-left, env(safe-area-inset-left, 0px));
+      }
+      #update-required {
+        min-height: min(100dvh, 480px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 24px;
+        text-align: center;
+      }
+      #update-required h1 {
+        font-size: var(--font-text-lg-size, 18px);
+        line-height: 24px;
+        font-weight: var(--font-weight-medium, 500);
+      }
+      #update-required p {
+        max-width: 36rem;
+        font-size: var(--font-text-sm-size, 14px);
+        color: var(--muted-foreground);
+      }
+      main {
+        max-width: 1600px;
+        margin: auto;
+        padding: 0 28px 28px;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+        color: inherit;
       }
       button,
       select,
-      input,
+      input:not([type="checkbox"]),
       textarea {
-        font: inherit;
-        border: 1px solid var(--color-border-primary, #a2aab4);
-        border-radius: 8px;
-        padding: 8px;
-        background: var(--color-background-primary, Canvas);
-        color: inherit;
+        padding: 8px 12px;
+        min-height: 36px;
       }
-      button {
+      button,
+      select,
+      summary {
         cursor: var(--cursor-interaction, pointer);
       }
+      button {
+        font-weight: var(--font-weight-medium, 500);
+      }
+      button:hover:not(:disabled),
+      summary:hover {
+        background: var(--card);
+      }
       button:disabled {
-        opacity: 0.45;
+        opacity: 0.4;
         cursor: default;
       }
-      button:hover:not(:disabled) {
-        border-color: #5296c6;
+      summary:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 3px;
+      }
+      select option {
+        background: var(--background);
+        color: var(--foreground);
+      }
+      button svg,
+      summary svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+      .icon-button {
+        display: inline-grid;
+        place-items: center;
+        width: 36px;
+        padding: 8px;
+      }
+      .btn-primary {
+        background: var(--foreground);
+        color: var(--primary-foreground);
+        border-color: transparent;
+      }
+      .btn-primary:hover:not(:disabled) {
+        background: var(--foreground);
+        opacity: 0.85;
+      }
+      .muted,
+      small {
+        font-size: var(--font-text-sm-size, 12px);
+        color: var(--muted-foreground);
+      }
+      .view-toolbar {
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 24px;
+      }
+      .heading {
+        min-width: 0;
+        flex: 1;
+      }
+      h1 {
+        margin: 0;
+        font-size: var(--font-heading-sm-size, 18px);
+        font-weight: var(--font-weight-semibold, 600);
+        letter-spacing: -0.4px;
+        overflow-wrap: anywhere;
+      }
+      .view-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      #back {
+        white-space: nowrap;
+        color: var(--muted-foreground);
+      }
+      [data-page="viewer"] .view-toolbar {
+        margin-bottom: 16px;
+      }
+      #part-prompt {
+        width: 100%;
+        min-height: 96px;
+        background: var(--card);
+        resize: vertical;
+      }
+      #part-prompt:focus-visible {
+        box-shadow: none;
+      }
+      #part-prompt-error {
+        font-size: var(--font-text-sm-size, 13px);
+        color: var(--color-text-danger, var(--destructive));
+        margin: 12px 0 0;
+      }
+      #part-prompt-error:empty {
+        display: none;
+      }
+      .library-toolbar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 24px 0;
+      }
+      #search {
+        flex: 1;
+        min-width: 160px;
+        max-width: 380px;
+        background: var(--card);
+        border-color: transparent;
+      }
+      #part-count {
+        margin-left: auto;
+        white-space: nowrap;
       }
       #parts {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-        gap: 10px;
-        margin: 14px 0;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
       }
       .part {
-        text-align: left;
-        min-height: 115px;
+        position: relative;
+        min-width: 0;
+        padding-bottom: 12px;
+      }
+      .part-open {
         display: flex;
         flex-direction: column;
-        gap: 10px;
-      }
-      .part img {
+        align-items: stretch;
+        justify-content: flex-start;
+        gap: 6px;
         width: 100%;
-        height: 130px;
+        text-align: left;
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+      .part-open:hover:not(:disabled) {
+        background: transparent;
+      }
+      .part-preview {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 100%;
+        aspect-ratio: 21 / 13;
+        overflow: hidden;
+        border-radius: var(--border-radius-lg, 12px);
+        background: #fff;
+        margin-bottom: 8px;
+        border: 1px solid transparent;
+      }
+      .part-open:hover .part-preview {
+        border-color: var(--muted-foreground);
+      }
+      .part-preview img {
+        width: 100%;
+        height: 100%;
         object-fit: contain;
       }
-      small,
-      .muted {
-        opacity: 0.7;
-        font-size: 12px;
+      .part-format {
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        font-size: var(--font-text-xs-size, 11px);
+        letter-spacing: 0.7px;
+        color: var(--muted-foreground);
       }
-      #search {
-        width: 100%;
+      .part strong {
+        font-size: var(--font-text-md-size, 14px);
+        font-weight: var(--font-weight-medium, 500);
+        padding-right: 28px;
       }
-      .toolbar {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-        margin: 12px 0;
+      .part strong,
+      .part-file {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .part-description {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        font-size: var(--font-text-sm-size, 12px);
+        line-height: 1.6;
+      }
+      .part-description,
+      .part-tags,
+      .part-format {
+        display: none;
+      }
+      [data-part-id] {
+        display: grid;
+        place-items: center;
+        position: absolute;
+        right: 8px;
+        top: 8px;
+        width: 30px;
+        height: 30px;
+        min-height: 30px;
+        padding: 0;
+        gap: 0;
+        border-radius: 50%;
+      }
+      [data-part-id][aria-pressed="true"] {
+        background: var(--foreground);
+        color: var(--primary-foreground);
+      }
+      #library-empty {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 64px 0;
+      }
+      .library-caption {
+        margin: 24px 0 0;
+        font-size: var(--font-text-xs-size, 11px);
+      }
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 250px;
+        border: 1px solid var(--border);
+        border-radius: var(--border-radius-lg, 14px);
+        overflow: hidden;
+      }
+      .model-stage {
+        position: relative;
+        min-width: 0;
+        background: var(--stage);
       }
       #viewport {
-        height: 320px;
+        height: clamp(420px, 68vh, 800px);
+        background: var(--stage);
       }
       canvas {
-        width: 100%;
-        height: 320px;
-        border-radius: 12px;
-        touch-action: none;
         display: block;
-      }
-      textarea {
+        touch-action: none;
         width: 100%;
-        margin-top: 10px;
-        resize: vertical;
+        height: 100%;
       }
-      #settings label {
+      .viewer-controls {
+        position: absolute;
+        z-index: 1;
+        top: 16px;
+        left: 16px;
         display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 3px;
+        border: 1px solid var(--border);
+        border-radius: var(--border-radius-md, 10px);
+        background: var(--background);
+      }
+      .viewer-controls select {
+        width: auto;
+        max-width: 140px;
+        border: 0;
+        background-color: transparent;
+        padding: 6px 28px 6px 8px;
+        min-height: 30px;
+        font-size: var(--font-text-sm-size, 12px);
+      }
+      .viewer-controls button {
+        border: 0;
+        min-height: 30px;
+        width: 32px;
+      }
+      .control-divider {
+        height: 18px;
+        width: 1px;
+        background: var(--border);
+        margin: 0 3px;
+      }
+      .stage-caption {
+        position: absolute;
+        bottom: 16px;
+        left: 20px;
+        right: 20px;
+        display: flex;
+        align-items: center;
         justify-content: space-between;
+        pointer-events: none;
+        color: var(--muted-foreground);
+        font-size: var(--font-text-xs-size, 11px);
         gap: 12px;
-        max-width: 440px;
-        margin: 18px 0;
+      }
+      #selection:empty {
+        display: none;
+      }
+      #selection {
+        background: var(--background);
+        border: 1px solid var(--border);
+        padding: 4px 8px;
+        border-radius: var(--border-radius-sm, 6px);
+      }
+      .inspector {
+        min-width: 0;
+        max-height: clamp(420px, 68vh, 800px);
+        overflow-y: auto;
+        padding: 22px 20px;
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .section-label {
+        margin: 0 0 14px;
+        font-size: var(--font-text-xs-size, 11px);
+        font-weight: var(--font-weight-semibold, 600);
+        color: var(--muted-foreground);
+        letter-spacing: 0;
+        text-transform: none;
+      }
+      #part-description {
+        color: var(--muted-foreground);
+        margin: 0 0 18px;
+        line-height: 1.7;
+        font-size: var(--font-text-sm-size, 12px);
+      }
+      .properties {
+        margin: 0;
+        display: grid;
+        gap: 16px;
+      }
+      .properties div {
+        min-width: 0;
+      }
+      .properties dt {
+        font-size: var(--font-text-xs-size, 11px);
+        color: var(--muted-foreground);
+        margin-bottom: 4px;
+      }
+      .properties dd {
+        margin: 0;
+        font-size: var(--font-text-sm-size, 12px);
+        overflow-wrap: anywhere;
+        font-variant-numeric: tabular-nums;
+      }
+      .part-about {
+        margin-top: 18px;
+      }
+      .part-about summary {
+        font-size: var(--font-text-sm-size, 12px);
+        color: var(--muted-foreground);
+      }
+      .part-about #part-description {
+        margin: 10px 0 0;
+      }
+      .inspector-section + .inspector-section {
+        border-top: 1px solid var(--border);
+        padding-top: 20px;
+      }
+      .point-annotation {
+        display: grid;
+        gap: 10px;
+        padding: 16px 0;
+        border-top: 1px solid var(--border);
+      }
+      .point-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .point-heading strong {
+        font-size: var(--font-text-sm-size, 12px);
+      }
+      .point-image {
+        width: 100%;
+        max-height: 160px;
+        object-fit: contain;
+        border-radius: var(--border-radius-md, 8px);
+      }
+      .point-field {
+        display: grid;
+        gap: 6px;
+        font-size: var(--font-text-sm-size, 12px);
+      }
+      #point-annotations:empty::before {
+        content: "Select a point on the part to add an image, reference or comment.";
+        display: block;
+        color: var(--muted-foreground);
+        font-size: var(--font-text-sm-size, 12px);
+      }
+      @supports (appearance: base-select) {
+        .form-select,
+        .form-select::picker(select) {
+          appearance: base-select;
+        }
+        .form-select {
+          display: flex;
+          align-items: center;
+          background-image: none;
+          padding-right: 10px;
+          gap: 10px;
+        }
+        .form-select::picker-icon {
+          color: var(--muted-foreground);
+        }
+        .form-select::picker(select) {
+          padding: 4px;
+          border: 1px solid var(--border);
+          border-radius: var(--border-radius-lg, 12px);
+          background: var(--background);
+          color: var(--foreground);
+          font: inherit;
+          box-shadow: 0 4px 24px #0002;
+        }
+        .form-select option {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 12px;
+          min-height: 32px;
+          border-radius: var(--border-radius-md, 8px);
+          background: transparent;
+          font: inherit;
+        }
+        .form-select option:hover,
+        .form-select option:focus {
+          background: color-mix(in srgb, var(--foreground) 6%, transparent);
+          outline: none;
+        }
+        .form-select option::checkmark {
+          order: 2;
+          margin-left: auto;
+        }
+        .viewer-controls #camera {
+          min-width: 112px;
+        }
+        .viewer-controls #mode {
+          min-width: 102px;
+        }
+      }
+      .viewer-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .actions-menu {
+        position: relative;
+      }
+      .actions-menu > summary {
+        list-style: none;
+        display: grid;
+        place-items: center;
+        border-radius: var(--border-radius-md, 8px);
+        width: 36px;
+        height: 36px;
+      }
+      .actions-menu > summary::-webkit-details-marker {
+        display: none;
+      }
+      .menu {
+        position: absolute;
+        z-index: 3;
+        right: 0;
+        top: 42px;
+        width: 200px;
+        padding: 5px;
+        border: 1px solid var(--border);
+        background: var(--background);
+        border-radius: var(--border-radius-md, 10px);
+        box-shadow: 0 8px 24px #0002;
+      }
+      .menu button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 0;
+        background: transparent;
+        border-radius: var(--border-radius-sm, 4px);
+        min-height: 36px;
+        font-size: var(--font-text-sm-size, 12px);
+      }
+      #save {
+        white-space: nowrap;
+      }
+      #dirty-indicator {
+        font-size: var(--font-text-xs-size, 11px);
+        color: var(--muted-foreground);
+      }
+      footer:has(#status:empty) {
+        display: none;
       }
       footer {
-        font-size: 12px;
-        margin-top: 16px;
-        display: flex;
-        gap: 12px;
-        justify-content: space-between;
+        margin: 0 0 16px;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--border-radius-md, 8px);
+        font-size: var(--font-text-sm-size, 12px);
       }
       #status {
         overflow-wrap: anywhere;
       }
-      input[type="file"] {
-        max-width: 100%;
+      #extensions-walkthrough > summary {
+        width: auto;
+        height: auto;
+        padding: 8px 12px;
+        white-space: nowrap;
       }
-      @media (max-width: 420px) {
-        body {
-          padding: 10px;
+      .walkthrough-target {
+        outline: 2px solid #ab5eff;
+        outline-offset: 4px;
+      }
+      .extensions-menu {
+        top: calc(100% + 6px);
+        width: 320px;
+        max-width: calc(100vw - 32px);
+        max-height: min(70vh, 600px);
+        overflow-y: auto;
+      }
+      .extensions-menu ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .extensions-menu ul ul {
+        padding-left: 18px;
+      }
+      .extensions-menu li {
+        position: relative;
+      }
+      .extensions-menu ul ul > li::before,
+      .extensions-menu ul ul > li::after {
+        content: "";
+        position: absolute;
+        left: -9px;
+        border-left: 1px solid var(--border);
+      }
+      .extensions-menu ul ul > li::before {
+        top: 0;
+        width: 9px;
+        height: 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .extensions-menu ul ul > li:not(:last-child)::after {
+        top: 14px;
+        bottom: 0;
+      }
+      #extensions-walkthrough .walkthrough-node {
+        display: block;
+        width: 100%;
+        min-height: 28px;
+        height: auto;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 20px;
+        text-align: left;
+        white-space: nowrap;
+      }
+      .extensions-menu button {
+        cursor: pointer;
+      }
+      .extensions-menu button:hover {
+        background: var(--stage);
+      }
+      .extension-guide {
+        position: fixed;
+        margin: 0;
+        width: 300px;
+        max-width: calc(100vw - 24px);
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--background);
+        color: var(--foreground);
+        box-shadow: 0 8px 24px #0002;
+      }
+      .extension-guide p {
+        margin: 8px 0 12px;
+      }
+      .message-options {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .message-options > label {
+        display: grid;
+        gap: 6px;
+      }
+      dialog {
+        width: min(440px, calc(100% - 32px));
+        border: 1px solid var(--border);
+        border-radius: var(--border-radius-xl, 16px);
+        padding: 24px;
+        background: var(--background);
+        color: inherit;
+      }
+      dialog h2 {
+        font-size: var(--font-heading-sm-size, 18px);
+        margin-top: 0;
+      }
+      dialog .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 20px;
+      }
+      dialog::backdrop {
+        background: #0006;
+      }
+      @media (max-width: 1000px) {
+        main {
+          padding: 0 20px 20px;
         }
-        #viewport,
-        canvas {
-          height: 260px;
+        .workspace {
+          grid-template-columns: minmax(0, 1fr) 220px;
+        }
+        .inspector {
+          padding: 20px 16px;
+        }
+        #parts {
+          gap: 18px;
+        }
+      }
+      @media (max-width: 720px) {
+        main {
+          padding: 0 16px 16px;
+        }
+        .view-toolbar {
+          min-height: 72px;
+          gap: 8px;
+          flex-wrap: wrap;
+          padding: 12px 0;
+        }
+        h1 {
+          font-size: 16px;
+        }
+        .workspace {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        #viewport {
+          height: 400px;
+        }
+        .inspector {
+          max-height: none;
+          overflow-y: visible;
+          border-left: 0;
+          border-top: 1px solid var(--border);
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 20px;
+        }
+        .inspector-section + .inspector-section {
+          border-top: 0;
+          padding-top: 0;
+        }
+        .inspector .point-section {
+          grid-column: 1 / -1;
+        }
+        #parts {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px;
+        }
+        #download {
+          font-size: var(--font-text-sm-size, 12px);
+        }
+      }
+      @media (max-width: 440px) {
+        .view-toolbar .heading {
+          flex: 1 1 140px;
+        }
+        .view-actions {
+          margin-left: auto;
+        }
+        #parts {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .inspector {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        #viewport {
+          height: 330px;
+        }
+        .stage-caption .gesture-hint {
+          display: none;
+        }
+        .viewer-controls {
+          top: 12px;
+          left: 12px;
+        }
+        .viewer-controls select {
+          max-width: 115px;
+        }
+      }
+      [data-surface="widget"][data-display-mode="inline"] main {
+        padding: 0 12px 12px;
+      }
+      [data-surface="widget"][data-display-mode="inline"] .view-toolbar {
+        min-height: 64px;
+        margin-bottom: 12px;
+      }
+      [data-surface="widget"][data-display-mode="inline"] .workspace {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      [data-surface="widget"][data-display-mode="inline"] #viewport {
+        height: 280px;
+      }
+      [data-surface="widget"][data-display-mode="inline"] .inspector {
+        border-left: 0;
+        border-top: 1px solid var(--border);
+      }
+      [data-surface="widget"][data-display-mode="inline"] #parts {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      [data-surface="widget"][data-display-mode="inline"] .part {
+        padding: 4px 40px 4px 0;
+      }
+      [data-surface="widget"][data-display-mode="inline"] .part-open {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+      }
+      [data-surface="widget"][data-display-mode="inline"] .part-preview {
+        width: 56px;
+        flex: 0 0 56px;
+        height: 56px;
+        margin: 0;
+      }
+      [data-surface="widget"][data-display-mode="inline"] .part strong {
+        font-size: 13px;
+        white-space: normal;
+        padding: 0;
+      }
+      [data-surface="widget"][data-display-mode="inline"] .part-description,
+      [data-surface="widget"][data-display-mode="inline"] .part-file,
+      [data-surface="widget"][data-display-mode="inline"] .part-format {
+        display: none;
+      }
+      [data-surface="widget"][data-display-mode="inline"] [data-part-id] {
+        top: 50%;
+        right: 0;
+        transform: translateY(-50%);
+      }
+      @media (max-width: 600px), (pointer: coarse) {
+        .btn,
+        .form-select,
+        .form-control,
+        .actions-menu > summary,
+        .part-about summary {
+          min-height: 44px;
+        }
+        input.form-control,
+        textarea.form-control,
+        select.form-select {
+          font-size: 16px;
+        }
+        .icon-button,
+        .actions-menu > summary,
+        [data-part-id] {
+          width: 44px;
+          min-height: 44px;
+        }
+        .viewer-controls {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+          right: 12px;
+          max-width: 380px;
+          gap: 0;
+        }
+        .viewer-controls select {
+          width: 100%;
+          min-width: 0;
+          max-width: none;
+          min-height: 44px;
+          padding-left: 6px;
+          padding-right: 20px;
+        }
+        .viewer-controls button {
+          width: 44px;
+          min-height: 44px;
+        }
+        .control-divider {
+          display: none;
+        }
+        .menu {
+          top: 48px;
+          max-width: calc(100vw - 32px);
+        }
+        .menu button {
+          min-height: 44px;
+        }
+        .part-about summary {
+          display: flex;
+          align-items: center;
+        }
+        .part-about summary::before {
+          content: "+";
+          margin-right: 8px;
+        }
+        .part-about[open] summary::before {
+          content: "−";
+        }
+        .part-about summary::-webkit-details-marker {
+          display: none;
+        }
+        dialog {
+          max-height: calc(100dvh - 32px);
+          overflow-y: auto;
+        }
+        dialog .toolbar {
+          flex-direction: column;
+        }
+        dialog .btn {
+          width: 100%;
+          white-space: normal;
+        }
+        [data-surface="widget"][data-display-mode="inline"] .part {
+          padding-right: 52px;
+        }
+      }
+      @media (max-width: 600px) {
+        .view-toolbar {
+          gap: 4px 8px;
+        }
+        .view-toolbar .heading {
+          flex: 1;
+        }
+        .view-actions {
+          flex-basis: 100%;
+          justify-content: flex-end;
+        }
+        [data-page="library"] .view-actions {
+          flex-basis: auto;
+        }
+        #dirty-indicator {
+          margin-right: auto;
+        }
+        #parts {
+          gap: 24px;
+        }
+        .properties {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .properties div:first-child,
+        .properties div:last-child {
+          grid-column: 1 / -1;
+        }
+      }
+      @media (max-width: 360px) {
+        .view-actions {
+          flex-wrap: wrap;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
         }
       }
     </style>
   </head>
   <body>
-    <header>
-      <button id="back">Library</button>
-      <h1 id="heading">Parts Library</h1>
-      <button id="settings-button">Settings</button
-      ><button id="fullscreen">Expand</button>
-    </header>
-    <section id="library">
-      <p class="muted"><!-- BUILD_DESCRIPTION --></p>
-      <input
-        id="search"
-        aria-label="Search parts"
-        placeholder="Search parts…"
-      />
-      <div id="parts"></div>
-      <label>Import CAD <input id="import" type="file" accept=".stl" /></label>
-      <div id="host-file" hidden class="toolbar">
-        <label
-          >Local file path
-          <input
-            id="host-file-path"
-            required
-            placeholder="/path/to/part.stl" /></label
-        ><button id="host-file-open" type="button">Open in Codex</button>
-      </div>
-      <p class="muted">
-        Illustrative sample geometry. Not fit-verified for manufacturing.
-      </p>
-    </section>
-    <section id="viewer" hidden>
-      <div class="toolbar">
-        <select id="camera" aria-label="Camera">
-          <option value="custom" disabled>Custom</option>
-          <option value="isometric">Isometric</option>
-          <option value="front">Front</option>
-          <option value="top">Top</option></select
-        ><select id="mode" aria-label="Render mode">
-          <option value="edges">Edges</option>
-          <option value="solid">Solid</option>
-          <option value="wireframe">Wireframe</option></select
-        ><button id="fit">Fit</button
-        ><button id="rotate">Rotate geometry 90°</button>
-      </div>
-      <div id="viewport" aria-label="3D part viewer"></div>
-      <p id="selection" class="muted"></p>
-      <p id="dimensions" class="muted"></p>
-      <textarea
-        id="note"
-        aria-label="Inspection note"
-        placeholder="Add an inspection note…"
-      ></textarea>
-      <div class="toolbar">
-        <button id="share">Attach view + note</button
-        ><button id="ask">Ask about this view</button
-        ><button id="download">Download STL</button
-        ><button id="save" disabled>Save file</button
-        ><button id="reload">Reload file</button
-        ><button id="discard">Discard edits</button
-        ><button id="open-source" hidden>Open source in Codex</button
-        ><button id="add-library">Add to library</button>
-      </div>
-    </section>
-    <section id="settings" hidden>
-      <label
-        >Units<select id="units">
-          <option value="mm">Millimeters</option>
-          <option value="in">Inches</option>
-        </select></label
-      ><label>Show grid<input id="grid" type="checkbox" checked /></label
-      ><label
-        >Default camera<select id="default-camera">
-          <option value="isometric">Isometric</option>
-          <option value="front">Front</option>
-          <option value="top">Top</option>
-        </select></label
+    <div class="safe-area">
+      <section
+        id="update-required"
+        role="status"
+        aria-labelledby="update-title"
+        hidden
       >
-      <p id="settings-info" class="muted">
-        Demo defaults last for this MCP run and reset when the server restarts.
+        <h1 id="update-title">Update required</h1>
+        <p>Update ChatGPT or Codex to use Bits &amp; Bolts.</p>
+      </section>
+      <main>
+        <div id="view-toolbar" class="view-toolbar">
+          <button id="back" class="btn btn-ghost">‹ Library</button>
+          <div class="heading">
+            <h1 id="heading">Bits &amp; Bolts</h1>
+          </div>
+          <div class="view-actions">
+            <div id="viewer-actions" class="viewer-actions" hidden>
+              <span id="dirty-indicator" hidden>Unsaved changes</span>
+              <button id="save" class="btn btn-primary" disabled hidden>
+                Save changes
+              </button>
+              <button class="btn" id="download">Export STL</button>
+              <details id="part-tools" class="actions-menu">
+                <summary aria-label="Part actions" title="Part actions">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 12a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0Zm7 0a2 2 0 1 1 4 0 2 2 0 0 1-4 0Z"
+                    />
+                  </svg>
+                </summary>
+                <div class="menu">
+                  <button class="btn" id="add-library">Add to library</button>
+                  <button class="btn" id="reload">Reload file</button>
+                  <button class="btn" id="discard">Discard changes</button>
+                  <button class="btn" id="open-source" hidden>
+                    Open source file
+                  </button>
+                </div>
+              </details>
+            </div>
+            <button id="view-library" class="btn btn-ghost" hidden>
+              View library
+            </button>
+          </div>
+        </div>
+        <footer><span id="status" role="status"></span></footer>
+        <section id="library" aria-label="Parts library">
+          <div class="library-toolbar">
+            <input
+              class="form-control"
+              id="search"
+              type="search"
+              aria-label="Search parts"
+              placeholder="Search parts"
+            />
+            <details id="extensions-walkthrough" class="actions-menu">
+              <summary>Extensions walkthrough</summary>
+              <div class="menu extensions-menu"></div>
+            </details>
+            <span id="part-count" class="muted" aria-live="polite"></span>
+            <button class="btn btn-primary" id="new-part" hidden>
+              Create part
+            </button>
+            <button class="btn" id="add-part">Import part</button>
+            <input id="import" type="file" accept=".stl" hidden />
+          </div>
+          <div id="parts"></div>
+          <button class="btn" id="retry-library" hidden>
+            Retry loading library
+          </button>
+          <p class="muted library-caption">
+            Sample parts are for exploration. Verify dimensions before
+            manufacturing.
+          </p>
+        </section>
+        <section id="viewer" hidden aria-label="Part workspace">
+          <div class="workspace">
+            <div class="model-stage">
+              <div class="viewer-controls" aria-label="View controls">
+                <select
+                  class="form-select"
+                  id="camera"
+                  aria-label="View orientation"
+                >
+                  <option value="isometric">Isometric</option>
+                </select>
+                <span class="control-divider"></span>
+                <select
+                  class="form-select"
+                  id="mode"
+                  aria-label="Display style"
+                >
+                  <option value="solid">Solid</option>
+                </select>
+                <span class="control-divider"></span>
+                <button
+                  id="fit"
+                  class="btn icon-button btn-ghost"
+                  aria-label="Zoom to fit"
+                  title="Zoom to fit"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5" />
+                    <rect x="8" y="8" width="8" height="8" rx="1" />
+                  </svg>
+                </button>
+              </div>
+              <div id="viewport" aria-label="3D part viewer"></div>
+              <div class="stage-caption">
+                <span id="selection"></span
+                ><span class="gesture-hint"
+                  >Drag to orbit · Scroll to zoom</span
+                >
+              </div>
+            </div>
+            <aside id="inspector" class="inspector" aria-label="Part details">
+              <section class="inspector-section">
+                <h2 class="section-label">Part details</h2>
+                <dl class="properties">
+                  <div>
+                    <dt>Overall size</dt>
+                    <dd id="dimensions">—</dd>
+                    <dd id="dimension-note" class="muted" hidden>
+                      Source units assumed to be mm.
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Format</dt>
+                    <dd id="model-format">—</dd>
+                  </div>
+                  <div>
+                    <dt>File</dt>
+                    <dd id="model-file">—</dd>
+                  </div>
+                </dl>
+                <details class="part-about">
+                  <summary>About this part</summary>
+                  <p id="part-description"></p>
+                </details>
+              </section>
+              <section
+                class="inspector-section point-section"
+                aria-label="Point annotations"
+              >
+                <h2 class="section-label">Points</h2>
+                <div id="point-annotations"></div>
+              </section>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+    <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
+      <h2 id="unsaved-title">Discard unsaved changes?</h2>
+      <p>
+        Save or export your part to keep your changes, or discard them to
+        continue.
       </p>
-      <button id="skills" hidden>Browse skills</button>
-    </section>
-    <footer>
-      <span id="status" role="status"></span
-      ><span id="attached">Context state unavailable</span>
-    </footer>
+      <div class="toolbar">
+        <button id="keep-editing" class="btn btn-primary" autofocus>
+          Keep editing</button
+        ><button class="btn" id="discard-and-leave">Discard changes</button>
+      </div>
+    </dialog>
+    <dialog id="create-part-dialog" aria-labelledby="part-prompt-title">
+      <form id="create-part-form">
+        <h2 id="part-prompt-title">What do you want to design?</h2>
+        <textarea
+          id="part-prompt"
+          class="form-control"
+          rows="4"
+          aria-labelledby="part-prompt-title"
+          aria-describedby="part-prompt-error"
+          placeholder="A bracket for a small shelf…"
+          required
+          autofocus
+        ></textarea>
+        <div class="message-options">
+          <label
+            >Conversation
+            <select id="message-target" class="form-select">
+              <option value="new">New chat</option>
+              <option value="active">Current chat</option>
+            </select>
+          </label>
+          <label class="form-check">
+            <input id="review-draft" class="form-check-input" type="checkbox" />
+            Review in chat before sending
+          </label>
+        </div>
+        <p id="part-prompt-error" role="alert"></p>
+        <div class="toolbar">
+          <button id="cancel-create-part" class="btn" type="button">
+            Cancel
+          </button>
+          <button
+            id="create-part"
+            class="btn btn-primary"
+            type="submit"
+            disabled
+          >
+            Create
+          </button>
+        </div>
+      </form>
+    </dialog>
     <!-- APP_SCRIPT -->
   </body>
 </html>

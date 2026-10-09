@@ -1,7 +1,7 @@
-import { IconSchema } from "@modelcontextprotocol/sdk/types.js";
+import { IconSchema } from "@modelcontextprotocol/core";
 import { z } from "zod";
 
-import { NonBlankStringSchema } from "../shared/strings.js";
+import { NonBlankStringSchema } from "./strings.js";
 
 export const OpenAIUiQuickActionSchema = z.strictObject({
   title: NonBlankStringSchema,
@@ -21,10 +21,6 @@ export const OpenAIUiEntrypointSchema = z.discriminatedUnion("type", [
   z.strictObject({
     type: z.literal("global"),
     quickAction: OpenAIUiQuickActionSchema.optional(),
-  }),
-  z.strictObject({
-    searchTerms: z.array(z.string().trim().min(1)).optional(),
-    type: z.literal("settings"),
   }),
   z.strictObject({ type: z.literal("thread") }),
 ]);
