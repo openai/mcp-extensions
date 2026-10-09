@@ -168,7 +168,7 @@ interface DeepLinkHostState {
 Deep link with two query parameters:
 
 ```text
-codex://plugins/bits-and-bolts/app/cad.library?path=%2Fparts%3Ftag%3Dbolt%26sort%3Dasc
+codex://plugins/bits-and-bolts/app/cad.browse?path=%2Fparts%3Ftag%3Dbolt%26sort%3Dasc
 ```
 
 MCP App `initialize` result:
@@ -193,7 +193,7 @@ MCP App `initialize` result:
 Notification when the user clicks a deep link to a different page:
 
 ```text
-codex://plugins/bits-and-bolts/app/cad.library?path=%2Fparts%2Fhex-bolt
+codex://plugins/bits-and-bolts/app/cad.browse?path=%2Fparts%2Fhex-bolt
 ```
 
 ```json
