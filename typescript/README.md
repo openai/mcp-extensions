@@ -18,12 +18,6 @@ For MCP Apps, install the app integration instead:
 pnpm add @openai/mcp-extensions @modelcontextprotocol/ext-apps@^1.7.5 @modelcontextprotocol/sdk@^1
 ```
 
-### Migrating to 0.2
-
-Server helpers use MCP SDK 2. Import `McpServer` from `@modelcontextprotocol/server` and use `ServerContext` in settings and mention handlers. Read request metadata from `context.mcpReq._meta` and HTTP authentication from `context.http?.authInfo`.
-
-Pass the current handler context to `elicitInputLegacy(context, params, options)`. The deprecated `elicitInput` alias takes the same arguments. One SDK 2 server can serve older connections with legacy forms and newer connections with multi-round-trip forms. MCP Apps still use the SDK 1 dependency required by `@modelcontextprotocol/ext-apps`.
-
 ## MCP Server Setup
 
 Enable OpenAI extensions for an MCP Server created with the MCP TypeScript SDK.

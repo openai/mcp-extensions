@@ -8,7 +8,7 @@ OpenAI MCP Extensions adds ChatGPT-specific capabilities to MCP so developers ca
 2. Select the **Bits & Bolts** icon in the sidebar to open the **Parts Library**.
 3. Open **Extensions walkthrough** to explore a demo of each major extension.
 
-   ![Bits & Bolts Remote selected in the sidebar with the Parts Library open](resources/01-global-library.png)
+   ![Bits & Bolts Parts Library with the Extensions walkthrough tree expanded](resources/01-global-library.png)
 
 ## Showcase
 
@@ -38,16 +38,16 @@ Let users select a CAD part using thumbnail choices.
 
 ## Get started
 
-### 1. Install the SDK
+### 1. Integrate extensions
+
+Ask `@Plugin Creator` in Codex to build a new plugin or improve an existing one for you.
+
+### 2. Install the SDK
 
 - [TypeScript](typescript/README.md#installation): `@openai/mcp-extensions` for MCP servers and Apps.
 - [Python](python/README.md#installation): `openai-mcp-extensions` for MCP servers.
 
-### 2. Integrate extensions
-
-Ask [Plugin Creator](https://chatgpt.com/plugins/plugin_connector_1p_e1a10c53223481918a42f1510ec46c1e) how extensions can jumpstart a new plugin or improve an existing one.
-
-### 3. Explore supported extensions
+### 3. Learn more
 
 - [docs/spec.md](docs/spec.md) lists all supported extensions.
 - [docs/patterns.md](docs/patterns.md) covers best practices.
