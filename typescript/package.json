@@ -41,7 +41,7 @@
   "peerDependencies": {
     "@modelcontextprotocol/server": "^2.0.0",
     "@modelcontextprotocol/ext-apps": "^1.7.5",
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.31.0"
   },
   "peerDependenciesMeta": {
     "@modelcontextprotocol/ext-apps": {
@@ -70,9 +70,9 @@
   ],
   "devDependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.5",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "@modelcontextprotocol/server": "^2.0.0",
-    "@modelcontextprotocol/client": "^2.0.0"
+    "@modelcontextprotocol/client": "^2.3.1"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
