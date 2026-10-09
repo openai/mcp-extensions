@@ -22,11 +22,6 @@ export const OpenAIUiEntrypointSchema = z.discriminatedUnion("type", [
     type: z.literal("global"),
     quickAction: OpenAIUiQuickActionSchema.optional(),
   }),
-  z.strictObject({
-    searchTerms: z.array(z.string().trim().min(1)).optional(),
-    /** @deprecated Use structured settings via openai/settings. */
-    type: z.literal("settings"),
-  }),
   z.strictObject({ type: z.literal("thread") }),
 ]);
 export const OpenAIUiToolMetadataSchema = z.strictObject({

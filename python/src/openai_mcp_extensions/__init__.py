@@ -36,7 +36,6 @@ from openai_mcp_extensions.settings import (
 from openai_mcp_extensions.ui import (
     OpenAIFileEntrypoint,
     OpenAIGlobalEntrypoint,
-    OpenAISettingsEntrypoint,
     OpenAIThreadEntrypoint,
     OpenAIUiEntrypoint,
     OpenAIUiQuickAction,
@@ -77,7 +76,6 @@ __all__ = [
     "OpenAIMentionsCapability",
     "OpenAIResourceMetadata",
     "OpenAIResourceToolCallMetadata",
-    "OpenAISettingsEntrypoint",
     "OpenAIThreadEntrypoint",
     "OpenAIUiEntrypoint",
     "OpenAIUiQuickAction",

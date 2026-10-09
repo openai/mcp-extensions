@@ -6,12 +6,10 @@ from typing import Annotated, Literal
 
 from mcp_types import Icon
 from pydantic import Field, JsonValue, StringConstraints
-from typing_extensions import deprecated
 
 from openai_mcp_extensions._models import NonBlankString, OpenAIStrictModel
 
 FileExtension = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r"^\.")]
-SearchTerm = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class OpenAIUiQuickActionToolTarget(OpenAIStrictModel):
@@ -44,14 +42,6 @@ class OpenAIGlobalEntrypoint(OpenAIStrictModel):
     quick_action: OpenAIUiQuickAction | None = None
 
 
-@deprecated("Use structured settings via openai/settings.", category=None)
-class OpenAISettingsEntrypoint(OpenAIStrictModel):
-    """Deprecated settings app entrypoint, retained for compatibility."""
-
-    type: Literal["settings"] = "settings"
-    search_terms: list[SearchTerm] | None = None
-
-
 class OpenAIThreadEntrypoint(OpenAIStrictModel):
     """Open an MCP App from a conversation side panel."""
 
@@ -59,10 +49,7 @@ class OpenAIThreadEntrypoint(OpenAIStrictModel):
 
 
 OpenAIUiEntrypoint = Annotated[
-    OpenAIFileEntrypoint
-    | OpenAIGlobalEntrypoint
-    | OpenAISettingsEntrypoint
-    | OpenAIThreadEntrypoint,
+    OpenAIFileEntrypoint | OpenAIGlobalEntrypoint | OpenAIThreadEntrypoint,
     Field(discriminator="type"),
 ]
 
