@@ -170,6 +170,13 @@ export function startApp() {
         ? catalog.filter((part) => part.id !== state.part?.id)
         : [],
     onChange: () => queueContext(0),
+    onRemove(selection) {
+      if (state.selection !== selection) return;
+      state.selection = null;
+      renderer.clearSelection();
+      draw();
+      queueContext(0);
+    },
   });
   const library = createLibrary({
     openPart: (part) => openPart(part).catch(fail),

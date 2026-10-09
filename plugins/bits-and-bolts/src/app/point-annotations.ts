@@ -28,10 +28,12 @@ export function createPointAnnotations({
   container,
   getParts,
   onChange,
+  onRemove,
 }: {
   container: HTMLElement;
   getParts: () => PublicCadPart[];
   onChange: () => void;
+  onRemove: (selection: CadSelection) => void;
 }) {
   let annotations: Annotation[] = [];
   let nextPoint = 1;
@@ -120,6 +122,7 @@ export function createPointAnnotations({
     remove.onclick = () => {
       annotations = annotations.filter((point) => point !== annotation);
       element.remove();
+      onRemove(annotation.selection);
       onChange();
     };
     imageToggle.onchange = () => {
@@ -204,6 +207,7 @@ export function createPointAnnotations({
       );
       if (!remaining.length) {
         annotation.element.remove();
+        onRemove(annotation.selection);
         return false;
       }
       const removed = (kind: string) =>

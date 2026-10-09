@@ -370,6 +370,8 @@
       }
       .inspector {
         min-width: 0;
+        max-height: clamp(420px, 68vh, 800px);
+        overflow-y: auto;
         padding: 22px 20px;
         border-left: 1px solid var(--border);
         display: flex;
@@ -461,6 +463,8 @@
           appearance: base-select;
         }
         .form-select {
+          display: flex;
+          align-items: center;
           background-image: none;
           padding-right: 10px;
           gap: 10px;
@@ -619,6 +623,8 @@
           height: 400px;
         }
         .inspector {
+          max-height: none;
+          overflow-y: visible;
           border-left: 0;
           border-top: 1px solid var(--border);
           display: grid;
@@ -629,7 +635,7 @@
           border-top: 0;
           padding-top: 0;
         }
-        .inspector #chat-actions {
+        .inspector .point-section {
           grid-column: 1 / -1;
         }
         #parts {
@@ -989,7 +995,10 @@
                   <p id="part-description"></p>
                 </details>
               </section>
-              <section class="inspector-section" aria-label="Point annotations">
+              <section
+                class="inspector-section point-section"
+                aria-label="Point annotations"
+              >
                 <h2 class="section-label">Points</h2>
                 <div id="point-annotations"></div>
               </section>
