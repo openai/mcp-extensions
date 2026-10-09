@@ -13,6 +13,7 @@
 
 - TypeScript server helpers: accept `McpServer` from `@modelcontextprotocol/server`. Settings and mention handlers receive `ServerContext` instead of SDK 1's `RequestHandlerExtra`. Legacy form helpers now take `(context, params, options?)`.
 - Export shared TypeScript schemas and types from `@openai/mcp-extensions`. Keep the existing `@openai/mcp-extensions/server` exports.
+- `createElicitInput`: take an SDK 2 `McpServer` directly instead of a minimal `{ server: client }` wrapper.
 - Add TypeScript's `OpenAIExtensions.elicitInputLegacy` and Python's `OpenAIExtensions.elicit_input_legacy`. Deprecate `elicitInput` and `elicit_input` as aliases.
 - Deprecate `createAppTransport`. Use `App` from `@modelcontextprotocol/ext-apps` with `OpenAIExtensions`.
 - Remove `type: "settings"` from both SDKs' entrypoint unions and remove Python's `OpenAISettingsEntrypoint`. Use `openai/settings` for structured settings.

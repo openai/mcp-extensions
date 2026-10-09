@@ -39,12 +39,7 @@ const OpenAIFormClientCapabilitiesSchema = z.object({
   }),
 });
 
-export function createElicitInput(server: {
-  server: Pick<
-    McpServer["server"],
-    "getClientCapabilities" | "getNegotiatedProtocolVersion"
-  >;
-}): OpenAIElicitInput {
+export function createElicitInput(server: McpServer): OpenAIElicitInput {
   return async (context, params, options): Promise<OpenAIFormResult> => {
     const envelope = RequestEnvelopeSchema.parse(context.mcpReq.envelope ?? {});
     const protocolVersion =

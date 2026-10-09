@@ -5,10 +5,8 @@ import {
   requestFormInput,
   type OpenAIFormRequestParams,
 } from "@openai/mcp-extensions/server";
-import type { ServerContext } from "@modelcontextprotocol/server";
+import type { McpServer, ServerContext } from "@modelcontextprotocol/server";
 import { z } from "zod";
-
-export type RequestClient = Parameters<typeof createElicitInput>[0]["server"];
 
 const RequestEnvelopeSchema = z.object({
   "io.modelcontextprotocol/protocolVersion": z.string().optional(),
@@ -16,23 +14,23 @@ const RequestEnvelopeSchema = z.object({
 
 /** Keep compatibility with older dev-app image dialogs at the demo boundary. */
 export async function elicitCadForm(
-  client: RequestClient,
+  server: McpServer,
   context: ServerContext,
   params: OpenAIFormRequestParams,
 ) {
   const envelope = RequestEnvelopeSchema.parse(context.mcpReq.envelope ?? {});
   const protocolVersion =
     envelope["io.modelcontextprotocol/protocolVersion"] ??
-    client.getNegotiatedProtocolVersion();
+    server.server.getNegotiatedProtocolVersion();
   if (protocolVersion !== undefined && protocolVersion >= "2026-07-28") {
     return requestFormInput(context, { ...params, key: "form" });
   }
-  const capabilities = client.getClientCapabilities();
+  const capabilities = server.server.getClientCapabilities();
   if (
     capabilities?.extensions?.["openai/elicitation"] != null ||
     capabilities?.extensions?.["openai/form"] == null
   )
-    return createElicitInput({ server: client })(context, params, {
+    return createElicitInput(server)(context, params, {
       timeout: 300000,
     });
   const properties: Record<string, unknown> = {};
