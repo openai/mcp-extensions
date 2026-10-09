@@ -2,12 +2,14 @@
 
 ## Unreleased
 
-### Changes
+### Spec API changes
 
-- Require MCP SDK 2 and its matching protocol types. Both legacy and multi-round-trip forms use this SDK generation.
+- Multi-round-trip forms: put the extended schema in `_meta["openai/elicitation"].requestedSchema` and an empty object schema in core `requestedSchema`. Use `OpenAIExtensions.request_input` and register `OpenAIExtensions.middleware` for MCP `2026-07-28` or later.
 
-- Added `OpenAIExtensions.elicit_input_legacy` for connections that predate MCP `2026-07-28`. `elicit_input` remains supported as a deprecated alias.
-- For connections that negotiate MCP `2026-07-28` or later, use `OpenAIExtensions.request_input` and register `OpenAIExtensions.middleware` for multi-round-trip form elicitation.
+### SDK-only API changes
+
+- Require MCP SDK 2 and its matching protocol types for both legacy and multi-round-trip forms.
+- Add `OpenAIExtensions.elicit_input_legacy` for connections that predate MCP `2026-07-28`. Deprecate `elicit_input` as an alias.
 
 ## [0.1.0](https://github.com/openai/mcp-extensions/compare/python-v0.1.0...python-v0.1.0) (2026-09-29)
 

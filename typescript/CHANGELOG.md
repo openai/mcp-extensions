@@ -2,13 +2,16 @@
 
 ## Unreleased
 
-### Changes
+### Spec API changes
 
-- Server helpers now use MCP SDK 2. Pass `ServerContext` to `elicitInputLegacy(context, params, options)` and its deprecated `elicitInput` alias. Settings and mention handlers also receive `ServerContext`.
+- Multi-round-trip forms: put the extended schema in `_meta["openai/elicitation"].requestedSchema` and an empty object schema in core `requestedSchema`. Use `requestFormInput` from `@openai/mcp-extensions/server` for MCP `2026-07-28` or later.
+
+### SDK-only API changes
+
+- Server helpers use MCP SDK 2. Legacy form helpers take `ServerContext`: `elicitInputLegacy(context, params, options)`. Settings and mention handlers also receive `ServerContext`.
 - Server-only installations use `@modelcontextprotocol/server`. MCP Apps retain the SDK 1 peer required by `@modelcontextprotocol/ext-apps`.
-
-- Added `OpenAIExtensions.elicitInputLegacy` for connections that predate MCP `2026-07-28`. `elicitInput` remains supported as a deprecated alias.
-- Added `requestFormInput` from `@openai/mcp-extensions/server` for multi round-trip openai form extension elicitations.
+- Add `OpenAIExtensions.elicitInputLegacy` for connections that predate MCP `2026-07-28`. Deprecate `elicitInput` as an alias.
+- `createElicitInput` takes an SDK 2 `McpServer` directly instead of a minimal `{ server: client }` wrapper.
 
 ## [0.1.0](https://github.com/openai/mcp-extensions/compare/node-v0.1.0...node-v0.1.0) (2026-09-29)
 
