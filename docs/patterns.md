@@ -44,11 +44,11 @@ For example, see how Bits & Bolts [applies ChatGPT's theme and style variables](
 
 Users should feel that the model understands what they see and do in an MCP App. Use the decision table below to keep the user, MCP App, and model aligned on the app's current state.
 
-| Mechanism | When to use it |
-| --- | --- |
-| `ui/update-model-context`: `content` | Attach content the user explicitly selects, such as an item they add to chat. |
+| Mechanism                                      | When to use it                                                                                                             |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `ui/update-model-context`: `content`           | Attach content the user explicitly selects, such as an item they add to chat.                                              |
 | `ui/update-model-context`: `structuredContent` | Provide high-level background context the model needs to understand what has changed this turn, such as a page navigation. |
-| Server-side MCP tools | Let the model fetch additional details about changes reported in model context or perform mutations. |
+| Server-side MCP tools                          | Let the model fetch additional details about changes reported in model context or perform mutations.                       |
 
 For example, see how Bits & Bolts handles a user opening the Yeet keycap:
 
