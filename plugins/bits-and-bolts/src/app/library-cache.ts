@@ -24,5 +24,7 @@ export function writeLibraryCache(parts: PublicCadPart[]) {
         })),
       }),
     );
-  } catch {}
+  } catch {
+    // Keep the library usable when storage is unavailable or full.
+  }
 }
