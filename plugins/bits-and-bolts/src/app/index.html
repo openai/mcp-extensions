@@ -152,6 +152,23 @@
       [data-page="viewer"] .view-toolbar {
         margin-bottom: 16px;
       }
+      #part-prompt {
+        width: 100%;
+        min-height: 96px;
+        background: var(--card);
+        resize: vertical;
+      }
+      #part-prompt:focus-visible {
+        box-shadow: none;
+      }
+      #part-prompt-error {
+        font-size: var(--font-text-sm-size, 13px);
+        color: var(--color-text-danger, var(--destructive));
+        margin: 12px 0 0;
+      }
+      #part-prompt-error:empty {
+        display: none;
+      }
       .library-toolbar {
         display: flex;
         align-items: center;
@@ -406,52 +423,85 @@
         border-top: 1px solid var(--border);
         padding-top: 20px;
       }
-      #chat-actions {
-        padding-top: 20px;
+      .point-annotation {
+        display: grid;
+        gap: 10px;
+        padding: 16px 0;
         border-top: 1px solid var(--border);
       }
-      .view-context {
+      .point-heading {
         display: flex;
         align-items: center;
-        gap: 10px;
+        justify-content: space-between;
+        gap: 8px;
       }
-      .view-thumbnail {
-        width: 44px;
-        height: 44px;
-        flex-shrink: 0;
-        border-radius: var(--border-radius-md, 8px);
-        overflow: hidden;
-        background: var(--card);
+      .point-heading strong {
+        font-size: var(--font-text-sm-size, 12px);
       }
-      #view-preview {
+      .point-image {
         width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
+        max-height: 160px;
+        object-fit: contain;
+        border-radius: var(--border-radius-md, 8px);
       }
-      .view-caption {
-        min-width: 0;
-        flex: 1;
-      }
-      .view-caption strong {
-        display: block;
-        font-weight: var(--font-weight-medium, 500);
+      .point-field {
+        display: grid;
+        gap: 6px;
         font-size: var(--font-text-sm-size, 12px);
       }
-      #view-caption {
+      #point-annotations:empty::before {
+        content: "Select a point on the part to add an image, reference or comment.";
         display: block;
-        overflow-wrap: anywhere;
-      }
-      #share {
-        flex-shrink: 0;
-      }
-      #chat-status {
+        color: var(--muted-foreground);
         font-size: var(--font-text-sm-size, 12px);
-        margin: 12px 0 0;
-        overflow-wrap: anywhere;
       }
-      #chat-status:empty {
-        display: none;
+      @supports (appearance: base-select) {
+        .form-select,
+        .form-select::picker(select) {
+          appearance: base-select;
+        }
+        .form-select {
+          background-image: none;
+          padding-right: 10px;
+          gap: 10px;
+        }
+        .form-select::picker-icon {
+          color: var(--muted-foreground);
+        }
+        .form-select::picker(select) {
+          padding: 4px;
+          border: 1px solid var(--border);
+          border-radius: var(--border-radius-lg, 12px);
+          background: var(--background);
+          color: var(--foreground);
+          font: inherit;
+          box-shadow: 0 4px 24px #0002;
+        }
+        .form-select option {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 12px;
+          min-height: 32px;
+          border-radius: var(--border-radius-md, 8px);
+          background: transparent;
+          font: inherit;
+        }
+        .form-select option:hover,
+        .form-select option:focus {
+          background: color-mix(in srgb, var(--foreground) 6%, transparent);
+          outline: none;
+        }
+        .form-select option::checkmark {
+          order: 2;
+          margin-left: auto;
+        }
+        .viewer-controls #camera {
+          min-width: 112px;
+        }
+        .viewer-controls #mode {
+          min-width: 102px;
+        }
       }
       .viewer-actions {
         display: flex;
@@ -832,9 +882,6 @@
                   <button class="btn" id="open-source" hidden>
                     Open source file
                   </button>
-                  <button class="btn" id="share-all-types" hidden>
-                    Add all context types
-                  </button>
                 </div>
               </details>
             </div>
@@ -854,6 +901,9 @@
               placeholder="Search parts"
             />
             <span id="part-count" class="muted" aria-live="polite"></span>
+            <button class="btn btn-primary" id="new-part" hidden>
+              Create part
+            </button>
             <button class="btn" id="add-part">Import part</button>
             <input id="import" type="file" accept=".stl" hidden />
           </div>
@@ -939,29 +989,9 @@
                   <p id="part-description"></p>
                 </details>
               </section>
-              <section id="chat-actions" aria-label="Add view to chat" hidden>
-                <div class="view-context">
-                  <div class="view-thumbnail">
-                    <img
-                      id="view-preview"
-                      alt="Current inspection view"
-                      hidden
-                    />
-                  </div>
-                  <div class="view-caption">
-                    <strong>Current view</strong
-                    ><small id="view-caption" class="muted"></small>
-                  </div>
-                  <button id="share" class="btn" aria-label="Add view to chat">
-                    Add
-                  </button>
-                </div>
-                <p
-                  id="chat-status"
-                  class="muted"
-                  role="status"
-                  aria-live="polite"
-                ></p>
+              <section class="inspector-section" aria-label="Point annotations">
+                <h2 class="section-label">Points</h2>
+                <div id="point-annotations"></div>
               </section>
             </aside>
           </div>
@@ -979,6 +1009,35 @@
           Keep editing</button
         ><button class="btn" id="discard-and-leave">Discard changes</button>
       </div>
+    </dialog>
+    <dialog id="create-part-dialog" aria-labelledby="part-prompt-title">
+      <form id="create-part-form">
+        <h2 id="part-prompt-title">What do you want to design?</h2>
+        <textarea
+          id="part-prompt"
+          class="form-control"
+          rows="4"
+          aria-labelledby="part-prompt-title"
+          aria-describedby="part-prompt-error"
+          placeholder="A bracket for a small shelf…"
+          required
+          autofocus
+        ></textarea>
+        <p id="part-prompt-error" role="alert"></p>
+        <div class="toolbar">
+          <button id="cancel-create-part" class="btn" type="button">
+            Cancel
+          </button>
+          <button
+            id="create-part"
+            class="btn btn-primary"
+            type="submit"
+            disabled
+          >
+            Create
+          </button>
+        </div>
+      </form>
     </dialog>
     <!-- APP_SCRIPT -->
   </body>

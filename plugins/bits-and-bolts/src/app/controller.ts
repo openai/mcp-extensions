@@ -1,5 +1,6 @@
 import { createRenderer } from "./renderers/three.js";
 import { createLibrary, filterParts } from "./library.js";
+import { createPointAnnotations } from "./point-annotations.js";
 import { readLibraryCache, writeLibraryCache } from "./library-cache.js";
 import { App } from "@modelcontextprotocol/ext-apps";
 import { z } from "zod/v4";
@@ -47,11 +48,6 @@ export function startApp() {
     state.connected &&
     ["widget", "thread", "global"].includes(surface || "") &&
     openai.modelContext != null;
-  const canShareAllTypes = () =>
-    canShare() &&
-    !!state.part?.resourceUri &&
-    state.capabilities.updateModelContext?.resourceLink != null &&
-    state.capabilities.updateModelContext?.resource != null;
   let initialToolResultPending = true;
   let importedSource: ModelSource | null = null;
   let importPending = false;
@@ -59,17 +55,24 @@ export function startApp() {
   let uploadUrl: string | undefined;
   type ElementFor<Id extends string> = Id extends "camera" | "mode"
     ? HTMLSelectElement
-    : Id extends "search" | "import"
-      ? HTMLInputElement
-      : Id extends "view-preview"
-        ? HTMLImageElement
-        : Id extends "part-tools"
-          ? HTMLDetailsElement
-          : Id extends "unsaved-dialog"
-            ? HTMLDialogElement
-            : Id extends "add-library" | "save" | "share"
-              ? HTMLButtonElement
-              : HTMLElement;
+    : Id extends "part-prompt"
+      ? HTMLTextAreaElement
+      : Id extends "create-part-dialog"
+        ? HTMLDialogElement
+        : Id extends "search" | "import"
+          ? HTMLInputElement
+          : Id extends "part-tools"
+            ? HTMLDetailsElement
+            : Id extends "unsaved-dialog"
+              ? HTMLDialogElement
+              : Id extends
+                    | "add-library"
+                    | "save"
+                    | "new-part"
+                    | "create-part"
+                    | "cancel-create-part"
+                ? HTMLButtonElement
+                : HTMLElement;
   const $ = <Id extends string>(id: Id) =>
     document.getElementById(id) as ElementFor<Id>;
   const state: AppState = {
@@ -114,11 +117,11 @@ export function startApp() {
   let pendingDeepLink: { url?: string } | null = null;
   let selectedParts: ContentBlock[] = [];
   let contextPending = false;
+  let ownContextUpdateId: string | undefined;
+  let pendingHostContext: OpenAIModelContextHostState | undefined;
+  let submittedContext: ReturnType<typeof viewContext> | undefined;
+  let createPartPending = false;
   let contextQueued = false;
-  let attachedView: ContentBlock | undefined;
-  let exampleContext: ContentBlock[] = [];
-  let viewPreviewTimer: ReturnType<typeof setTimeout> | undefined;
-  let viewPreviewKey = "";
   const status = (message: string) => {
     $("status").textContent = message;
   };
@@ -126,8 +129,23 @@ export function startApp() {
     container: $("viewport"),
     onChange(change) {
       Object.assign(state, change);
+      if (change.selection != null && canShare()) {
+        pointAnnotations.add({
+          partName: state.part?.name || state.file?.name || "Part",
+          selection: change.selection,
+          dimensionsMm: renderer.bounds().size,
+          camera: state.camera,
+          image:
+            state.capabilities.updateModelContext?.image != null
+              ? renderer.capture()
+              : undefined,
+        });
+        if (!catalogLoaded) void loadCatalog().catch(fail);
+      }
       $("camera").value = state.camera;
-      $("selection").textContent = state.selection ? "Point selected" : "";
+      $("selection").textContent = state.selection
+        ? "Point selected"
+        : "Click a point to annotate";
       queueContext();
     },
     async readWasm() {
@@ -144,6 +162,14 @@ export function startApp() {
         throw Error("The STEP importer is unavailable.");
       return Uint8Array.from(atob(content.blob), (c) => c.charCodeAt(0));
     },
+  });
+  const pointAnnotations = createPointAnnotations({
+    container: $("point-annotations"),
+    getParts: () =>
+      state.capabilities.updateModelContext?.resourceLink != null
+        ? catalog.filter((part) => part.id !== state.part?.id)
+        : [],
+    onChange: () => queueContext(0),
   });
   const library = createLibrary({
     openPart: (part) => openPart(part).catch(fail),
@@ -232,7 +258,9 @@ export function startApp() {
     $("part-description").parentElement!.hidden = !state.part?.description;
     $("dirty-indicator").hidden = !state.dirty;
     $("dimension-note").hidden = !renderer.bounds().assumedMillimeters;
-    $("selection").textContent = state.selection ? "Point selected" : "";
+    $("selection").textContent = state.selection
+      ? "Point selected"
+      : "Click a point to annotate";
     $("add-library").disabled = importPending;
     $("add-library").hidden = !!state.part && state.part.id !== "imported";
     $("add-library").textContent = importPending ? "Adding…" : "Add to library";
@@ -243,7 +271,6 @@ export function startApp() {
     $("part-tools").hidden = !$("part-tools").querySelector(
       "button:not([hidden])",
     );
-    queueViewPreview();
   }
   function ensureCanLeave(discardUnsaved = false) {
     if (state.dirty && !discardUnsaved)
@@ -259,7 +286,8 @@ export function startApp() {
     queueContext();
   }
   function show(page: AppState["page"]) {
-    $("chat-status").textContent = "";
+    if (page !== state.page) resetContext();
+    updateCreatePartForm();
     state.page = page;
     document.documentElement.dataset.page = page;
     $("part-tools").open = false;
@@ -300,7 +328,7 @@ export function startApp() {
     state.selection = null;
     state.etag = null;
     state.writable = false;
-    exampleContext = [];
+    resetContext();
     renderer.clear();
     status("");
     show("library");
@@ -361,8 +389,7 @@ export function startApp() {
     state.selection = null;
     importedSource = null;
     if (state.part?.id !== part.id) {
-      attachedView = undefined;
-      exampleContext = [];
+      resetContext();
     }
     state.part = part;
     state.file = null;
@@ -392,6 +419,7 @@ export function startApp() {
     }
   }
   function renderLibrary() {
+    pointAnnotations.refreshReferences();
     library.render(
       catalog,
       $("search").value,
@@ -491,8 +519,7 @@ export function startApp() {
     await unsubscribe().catch(fail);
     if (token !== generation) return;
     state.part = null;
-    attachedView = undefined;
-    exampleContext = [];
+    resetContext();
     state.file = file;
     renderer.clear();
     state.etag = null;
@@ -559,48 +586,27 @@ export function startApp() {
     return response;
   }
   function queueContext(delay = 300) {
-    queueViewPreview();
     clearTimeout(contextTimer);
     if (state.connected)
-      contextTimer = setTimeout(() => shareContext(false).catch(fail), delay);
-  }
-  function queueViewPreview() {
-    if (state.page !== "viewer" || !renderer.triangleCount()) return;
-    const key = JSON.stringify([
-      generation,
-      editSequence,
-      state.camera,
-      state.mode,
-      state.yaw,
-      state.pitch,
-      state.zoom,
-      state.grid,
-      state.selection,
-      state.host.theme,
-      renderer.context?.(),
-      $("viewport").clientWidth,
-      $("viewport").clientHeight,
-    ]);
-    if (key === viewPreviewKey) return;
-    clearTimeout(viewPreviewTimer);
-    viewPreviewTimer = setTimeout(() => {
-      if (state.page !== "viewer" || !renderer.triangleCount()) return;
-      const capture = renderer.capture();
-      $("view-preview").src = `data:${capture.mimeType};base64,${capture.data}`;
-      $("view-preview").hidden = false;
-      $("view-preview").alt =
-        `Current view of ${state.part?.name || state.file?.name || "the part"}`;
-      viewPreviewKey = key;
-      updateSelection();
-    }, 100);
+      contextTimer = setTimeout(() => shareContext().catch(fail), delay);
   }
   function partContent(part: PublicCadPart): ContentBlock {
     return {
-      type: "text",
-      text: `${part.name}: ${part.description}${part.resourceUri ? `\nPart ID: ${part.id}\nResource: ${part.resourceUri}` : ""}`,
+      ...(state.capabilities.updateModelContext?.resourceLink != null
+        ? {
+            type: "resource_link" as const,
+            uri: part.resourceUri,
+            name: part.fileName,
+            title: part.name,
+            mimeType: "text/markdown",
+          }
+        : {
+            type: "text" as const,
+            text: `${part.name}: ${part.description}${part.resourceUri ? `\nPart ID: ${part.id}\nResource: ${part.resourceUri}` : ""}`,
+          }),
       _meta: {
         "bits-and-bolts/partId": part.id,
-        "openai/title": part.name,
+        "openai/group": { title: "Parts" },
         ...(part.previews.isometric
           ? { "openai/thumbnail": { src: part.previews.isometric } }
           : {}),
@@ -609,17 +615,13 @@ export function startApp() {
   }
   function updateSelection() {
     library.updateSelection();
-    $("chat-actions").hidden =
-      !canShare() || state.page !== "viewer" || (!state.part && !state.file);
-    $("share").disabled = contextPending;
-    $("share-all-types").hidden = !canShareAllTypes();
-    $("share").setAttribute("aria-busy", String(contextPending));
-    $("view-caption").textContent = [
-      $("camera").selectedOptions[0]?.textContent || "Current view",
-      state.selection ? "Point selected" : null,
-    ]
-      .filter(Boolean)
-      .join(" · ");
+    $("point-annotations").parentElement!.hidden = !canShare();
+  }
+  function resetContext() {
+    selectedParts = [];
+    pointAnnotations.clear();
+    state.selection = null;
+    renderer.clearSelection();
   }
   async function togglePart(part: PublicCadPart) {
     if (contextPending || !canShare()) return;
@@ -633,14 +635,14 @@ export function startApp() {
         )
       : [...previous, partContent(part)];
     try {
-      await shareContext(false);
+      await shareContext();
     } catch (error) {
       selectedParts = previous;
       updateSelection();
       throw error;
     }
   }
-  function viewContext(withImage: boolean) {
+  function viewContext() {
     const data = {
       page: state.page,
       schematic: state.part?.name || state.file?.name || "Parts library",
@@ -673,46 +675,76 @@ export function startApp() {
       selection: state.selection ?? null,
       renderer: state.page === "viewer" ? (renderer.context?.() ?? null) : null,
     };
-    const content: ContentBlock[] = [...selectedParts, ...exampleContext];
-    if (withImage)
-      content.push({
-        type: "image",
-        ...renderer.capture(),
-        _meta: {
-          "openai/title": `View of ${data.schematic}`,
-          "bits-and-bolts/viewId": crypto.randomUUID(),
-        },
-      });
-    else if (attachedView) content.push(attachedView);
-    return { content, structuredContent: data };
+    return {
+      content: [...selectedParts, ...pointAnnotations.content()].map((block) =>
+        block.type === "resource" &&
+        state.capabilities.updateModelContext?.resource == null &&
+        "text" in block.resource
+          ? {
+              type: "text" as const,
+              text: block.resource.text,
+              _meta: block._meta,
+            }
+          : block,
+      ),
+      structuredContent: data,
+    };
   }
-  async function shareContext(withImage: boolean) {
+  async function shareContext() {
     if (!state.connected || !canShare()) return;
     if (contextPending) {
       contextQueued = true;
       return;
     }
-    const previousView = attachedView;
-    const context = viewContext(withImage);
-    const capture = withImage
-      ? context.content.find((block) => block.type === "image")
-      : undefined;
     contextPending = true;
     updateSelection();
-    if (capture) attachedView = capture;
+    submittedContext = viewContext();
     try {
-      await openai.modelContext!.update(context);
-      if (withImage) $("chat-status").textContent = "View attached to chat.";
-    } catch (error) {
-      if (capture && attachedView === capture) attachedView = previousView;
-      throw error;
+      ownContextUpdateId = (await openai.modelContext!.update(submittedContext))
+        ?.updateId;
     } finally {
       contextPending = false;
+      if (pendingHostContext !== undefined) {
+        const context = pendingHostContext;
+        pendingHostContext = undefined;
+        reconcileContext(context);
+      }
       updateSelection();
       if (contextQueued) {
         contextQueued = false;
-        void shareContext(false).catch(fail);
+        void shareContext().catch(fail);
       }
+    }
+  }
+  function reconcileContext(context: OpenAIModelContextHostState) {
+    if (
+      !submittedContext ||
+      (context !== null && context.updateId === ownContextUpdateId)
+    )
+      return;
+    if (
+      context !== null &&
+      (context.structuredContent?.page !== state.page ||
+        context.structuredContent?.part !== (state.part?.id || null) ||
+        context.structuredContent?.file !== (state.file?.name || null))
+    )
+      return;
+    const content = context?.content ?? [];
+    const sent = submittedContext.content;
+    pointAnnotations.reconcile(content, sent);
+    selectedParts = selectedParts.filter((block) => {
+      const id = block._meta?.["bits-and-bolts/partId"];
+      return (
+        !sent.some((sent) => sent._meta?.["bits-and-bolts/partId"] === id) ||
+        content.some((kept) => kept._meta?.["bits-and-bolts/partId"] === id)
+      );
+    });
+    if (
+      context === null &&
+      state.selection === submittedContext.structuredContent.selection
+    ) {
+      state.selection = null;
+      renderer.clearSelection();
     }
   }
   function applyHost(update: NonNullable<ReturnType<App["getHostContext"]>>) {
@@ -747,32 +779,16 @@ export function startApp() {
     for (const [key, value] of Object.entries(update.styles?.variables || {}))
       if (key.startsWith("--") && typeof value === "string")
         document.documentElement.style.setProperty(key, value);
-    if (
-      Object.hasOwn(update, "openai/modelContext") &&
-      update["openai/modelContext"] === null
-    ) {
-      // A consumed attachment must not cancel a newer navigation or view update.
-      state.selection = null;
-      renderer.clearSelection();
-    }
     if (Object.hasOwn(update, "openai/modelContext")) {
-      const modelContext = update["openai/modelContext"] as
+      const context = update["openai/modelContext"] as
         OpenAIModelContextHostState | undefined;
-      if (attachedView) {
-        const id = attachedView._meta?.["bits-and-bolts/viewId"];
-        attachedView = modelContext?.content?.find(
-          (block: ContentBlock) =>
-            block._meta?.["bits-and-bolts/viewId"] === id,
-        );
+      if (
+        context !== undefined &&
+        (context === null || context.updateId !== ownContextUpdateId)
+      ) {
+        if (contextPending) pendingHostContext = context;
+        else reconcileContext(context);
       }
-      exampleContext = (modelContext?.content ?? []).filter(
-        (block: ContentBlock) =>
-          block._meta?.["bits-and-bolts/contextExample"] === true,
-      );
-      selectedParts = (modelContext?.content ?? []).filter(
-        (block: ContentBlock) =>
-          typeof block._meta?.["bits-and-bolts/partId"] === "string",
-      );
       updateSelection();
     }
     const deepLink = update["openai/deepLink"] as
@@ -894,7 +910,7 @@ export function startApp() {
       inputSchema: z.strictObject({}),
       annotations: { readOnlyHint: true },
     },
-    () => viewContext(false),
+    () => viewContext(),
   );
   app.registerTool(
     "open_part",
@@ -913,7 +929,7 @@ export function startApp() {
       const part = catalog.find((part) => part.id === args.partId);
       if (!part) throw Error("Unknown part: " + args.partId);
       await openPart(part, args.discardUnsaved === true);
-      return viewContext(false);
+      return viewContext();
     },
   );
   app.registerTool(
@@ -952,7 +968,7 @@ export function startApp() {
       });
       draw();
       queueContext();
-      return viewContext(false);
+      return viewContext();
     },
   );
   app.registerTool(
@@ -964,7 +980,7 @@ export function startApp() {
     },
     () => {
       rotateGeometry();
-      return viewContext(false);
+      return viewContext();
     },
   );
   app.registerTool(
@@ -1010,7 +1026,6 @@ export function startApp() {
   app.onteardown = async () => {
     generation++;
     state.connected = false;
-    clearTimeout(viewPreviewTimer);
     clearTimeout(catalogTimer);
     clearTimeout(contextTimer);
     bodyObserver.disconnect();
@@ -1048,6 +1063,57 @@ export function startApp() {
   });
   $("retry-library").onclick = act(loadCatalog);
   $("search").oninput = renderLibrary;
+  function updateCreatePartForm() {
+    $("new-part").hidden = !state.connected || openai.message == null;
+    $("new-part").disabled = createPartPending;
+    $("part-prompt").readOnly = createPartPending;
+    $("create-part").disabled =
+      createPartPending || !$("part-prompt").value.trim();
+    $("cancel-create-part").disabled = createPartPending;
+    $("create-part").textContent = createPartPending ? "Creating…" : "Create";
+  }
+  async function createPart() {
+    const prompt = $("part-prompt").value.trim();
+    if (!prompt || createPartPending || !state.connected || !openai.message)
+      return;
+    createPartPending = true;
+    updateCreatePartForm();
+    $("part-prompt-error").textContent = "";
+    try {
+      const result = await openai.message.send({
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `Create a new CAD part with Bits & Bolts: ${prompt}`,
+          },
+        ],
+        _meta: { "openai/message": { target: "new", send: true } },
+      });
+      if (result.isError) throw Error("Could not start a new chat. Try again.");
+      $("part-prompt").value = "";
+      $("create-part-dialog").close();
+    } catch (error) {
+      $("part-prompt-error").textContent =
+        error instanceof Error ? error.message : String(error);
+    } finally {
+      createPartPending = false;
+      updateCreatePartForm();
+    }
+  }
+  $("new-part").onclick = () => {
+    $("part-prompt-error").textContent = "";
+    $("create-part-dialog").showModal();
+  };
+  $("cancel-create-part").onclick = () => $("create-part-dialog").close();
+  $("create-part-dialog").oncancel = (event: Event) => {
+    if (createPartPending) event.preventDefault();
+  };
+  $("part-prompt").oninput = updateCreatePartForm;
+  $("create-part-form").onsubmit = (event: SubmitEvent) => {
+    event.preventDefault();
+    void createPart();
+  };
   $("add-part").onclick = () => $("import").click();
   document.addEventListener("click", (event) => {
     if (!(event.target instanceof Element)) return;
@@ -1069,53 +1135,6 @@ export function startApp() {
     draw();
     queueContext();
   };
-  const chatAction = (fn: () => void | Promise<void>) => async () => {
-    $("chat-status").textContent = "";
-    try {
-      await fn();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      $("chat-status").textContent = message.replace(
-        /^MCP error -?\d+:\s*/,
-        "",
-      );
-    }
-  };
-  $("share").onclick = chatAction(() => {
-    clearTimeout(contextTimer);
-    $("chat-status").textContent = "Attaching view…";
-    return shareContext(true);
-  });
-  $("share-all-types").onclick = chatAction(() => {
-    if (!canShareAllTypes() || !state.part) return;
-    const meta = { "bits-and-bolts/contextExample": true };
-    exampleContext = [
-      {
-        type: "text",
-        text: `Inspecting ${state.part.name} in ${state.units}.`,
-        _meta: { ...meta, "openai/title": "Current view" },
-      },
-      {
-        type: "resource_link",
-        uri: state.part.resourceUri,
-        name: state.part.fileName,
-        title: `${state.part.name} reference`,
-        mimeType: "text/markdown",
-        _meta: meta,
-      },
-      {
-        type: "resource",
-        resource: {
-          uri: state.part.resourceUri,
-          mimeType: "text/markdown",
-          text: `# ${state.part.name}\n\n${state.part.description}`,
-        },
-        _meta: { ...meta, "openai/title": "Part notes" },
-      },
-    ];
-    $("part-tools").open = false;
-    return shareContext(true);
-  });
   $("save").onclick = act(save);
   $("reload").onclick = act(() => {
     if (state.file) return readFile(state.file, generation);
@@ -1210,8 +1229,7 @@ export function startApp() {
     if (token !== generation) return;
     importedSource = source;
     state.selection = null;
-    attachedView = undefined;
-    exampleContext = [];
+    resetContext();
     state.part = {
       name: file.name,
       id: "imported",

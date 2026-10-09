@@ -1,3 +1,4 @@
+import type { CadSelection } from "../viewer/scene.js";
 import type { ModelFormat, PreviewImages } from "../../shared/contracts.js";
 
 export type ModelSource = {
@@ -13,7 +14,7 @@ export type RenderState = {
   units: "mm" | "in";
   grid: boolean;
   host: { theme?: string };
-  selection?: unknown;
+  selection?: CadSelection | null;
 };
 export type RendererOptions = {
   container: HTMLElement;
