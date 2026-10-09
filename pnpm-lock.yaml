@@ -99,6 +99,9 @@ importers:
       '@cfworker/json-schema':
         specifier: ^4.1.1
         version: 4.1.1
+      '@modelcontextprotocol/core':
+        specifier: ^2.0.0
+        version: 2.1.0
       zod:
         specifier: 4.4.3
         version: 4.4.3

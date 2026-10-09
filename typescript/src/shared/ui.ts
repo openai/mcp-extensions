@@ -1,4 +1,4 @@
-import { IconSchema } from "@modelcontextprotocol/sdk/types.js";
+import { IconSchema } from "@modelcontextprotocol/core";
 import { z } from "zod";
 
 import { NonBlankStringSchema } from "./strings.js";

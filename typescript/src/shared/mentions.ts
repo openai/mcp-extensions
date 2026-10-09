@@ -1,7 +1,4 @@
-import {
-  IconSchema,
-  ResourceLinkSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { IconSchema, ResourceLinkSchema } from "@modelcontextprotocol/core";
 import { z } from "zod";
 import { NonBlankStringSchema } from "./strings.js";
 

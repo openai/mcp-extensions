@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
+import { McpServer } from "@modelcontextprotocol/server";
+import { CallToolResultSchema } from "@modelcontextprotocol/core";
 import { z } from "zod";
 
 import {
@@ -50,14 +49,14 @@ for (const names of [
           ],
         },
       ],
-      read: (extra) => {
-        assert.ok(extra.signal);
+      read: (context) => {
+        assert.ok(context.mcpReq.signal);
         return values;
       },
-      update: (set, extra) => {
+      update: (set, context) => {
         // This assignment verifies that the public handler infers the partial value type.
         const patch: Partial<z.infer<typeof schema>> = set;
-        assert.ok(extra.signal);
+        assert.ok(context.mcpReq.signal);
         writes++;
         values = { ...values, ...patch };
         return values;

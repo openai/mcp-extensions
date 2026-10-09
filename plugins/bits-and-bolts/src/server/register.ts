@@ -1,10 +1,10 @@
-import type {
+import {
   ResourceTemplate,
-  McpServer,
-  InputRequiredResult,
-  ServerContext,
+  type McpServer,
+  type InputRequiredResult,
+  type ServerContext,
+  type Icon,
 } from "@modelcontextprotocol/server";
-import type { Icon } from "@modelcontextprotocol/sdk/types.js";
 import {
   createSettings,
   createMentions,
@@ -28,11 +28,8 @@ import type { CatalogStore } from "./store.js";
 
 declare const __LOCAL_FILESYSTEM__: boolean;
 
-// The two SDKs share registration APIs; their entrypoints supply resource templates
-// and form handling from the matching SDK.
-export type CadServerOptions<Context = ServerContext> = {
+export type CadServerOptions = {
   server: Pick<McpServer, "registerTool" | "registerResource" | "server">;
-  resourceTemplate: typeof ResourceTemplate;
   partUriTemplate: string;
   store: Omit<CatalogStore, "import">;
   title?: string;
@@ -40,13 +37,12 @@ export type CadServerOptions<Context = ServerContext> = {
   icons: Icon[];
   formats: string[];
   elicit: (
-    context: Context,
+    context: ServerContext,
     params: OpenAIFormRequestParams,
   ) =>
     | OpenAIFormResult
     | InputRequiredResult
     | Promise<OpenAIFormResult | InputRequiredResult>;
-  requestMeta: (context: Context) => Record<string, unknown> | undefined;
   wasm: { blob: string } | { text: string };
   assetOrigin?: string;
   pluginDetailsUrl?: string;
@@ -73,9 +69,8 @@ const readonly = {
   destructiveHint: false,
   openWorldHint: false,
 };
-export function registerCadServer<Context = ServerContext>({
+export function registerCadServer({
   server,
-  resourceTemplate: ResourceTemplate,
   partUriTemplate,
   store,
   title = "Bits & Bolts",
@@ -83,13 +78,12 @@ export function registerCadServer<Context = ServerContext>({
   icons,
   formats,
   elicit: requestForm,
-  requestMeta,
   wasm,
   assetOrigin,
   pluginDetailsUrl = assetOrigin
     ? "https://chatgpt.com/plugins/plugin_asdk_app_6abadab6e7d881919e7491d52c7846e8"
     : undefined,
-}: CadServerOptions<Context>) {
+}: CadServerOptions) {
   const entrypoint = { icons, annotations: readonly };
   const UI = "ui://bits-and-bolts/global-v35";
   const THREAD = "ui://bits-and-bolts/thread-v35";
@@ -165,9 +159,7 @@ export function registerCadServer<Context = ServerContext>({
       };
     },
   );
-  const settings = createSettings(
-    server as unknown as Parameters<typeof createSettings>[0],
-  );
+  const settings = createSettings(server);
   settings.register({
     fields: {
       units: { schema: cadPreferencesSchema.shape.units, title: "Units" },
@@ -203,9 +195,7 @@ export function registerCadServer<Context = ServerContext>({
     read: () => store.readSettings(),
     update: (set) => store.updateSettings(set),
   });
-  createMentions(
-    server as unknown as Parameters<typeof createMentions>[0],
-  ).setHandler(async ({ query }) => ({
+  createMentions(server).setHandler(async ({ query }) => ({
     items: (await matching(query)).slice(0, 30).map((part) => ({
       type: "resource_link" as const,
       uri: part.resourceUri,
@@ -395,9 +385,7 @@ export function registerCadServer<Context = ServerContext>({
         _meta: { ui: { visibility: ["app"] } },
       },
       async ({ fileName }, context) => {
-        const path = getResourcePath(
-          requestMeta(context as unknown as Context),
-        );
+        const path = getResourcePath(context.mcpReq._meta);
         if (!path)
           throw Error("The host did not provide a trusted CAD source path.");
         const part = await store.importPath!(path, fileName);
@@ -409,7 +397,7 @@ export function registerCadServer<Context = ServerContext>({
     message: string,
     requestedSchema: OpenAIFormRequestParams["requestedSchema"],
   ) =>
-    requestForm(context as unknown as Context, {
+    requestForm(context, {
       mode: "form",
       message,
       requestedSchema,

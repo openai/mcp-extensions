@@ -1,10 +1,5 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
-import {
-  ToolSchema,
-  type ServerRequest,
-  type ServerNotification,
-} from "@modelcontextprotocol/sdk/types.js";
+import { ToolSchema } from "@modelcontextprotocol/core";
+import type { McpServer, ServerContext } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import {
@@ -28,8 +23,6 @@ const nativeSettingsFieldSchema = z
     allOf: z.never().optional(),
   })
   .refine((field) => field.enum === undefined || field.type === "string");
-
-type SettingsContext = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
 /** Native fields use Zod for validation and typed properties for presentation. */
 export interface OpenAISettingsField<Schema extends z.ZodType = z.ZodType> {
@@ -65,7 +58,7 @@ export interface OpenAISettingsRegistration<Fields extends SettingsFields> {
    * The helper validates the result and rejects missing or unknown fields.
    */
   read: (
-    extra: SettingsContext,
+    context: ServerContext,
   ) => SettingsValues<Fields> | Promise<SettingsValues<Fields>>;
   /**
    * Receives the supplied fields after schema validation. Authorize the request,
@@ -76,7 +69,7 @@ export interface OpenAISettingsRegistration<Fields extends SettingsFields> {
    */
   update: (
     set: Partial<SettingsValues<Fields>>,
-    extra: SettingsContext,
+    context: ServerContext,
   ) => SettingsValues<Fields> | Promise<SettingsValues<Fields>>;
 }
 
@@ -95,7 +88,9 @@ export interface OpenAISettings {
 }
 
 /** Creates the facade exposed by `OpenAIExtensions.settings`; no tools are registered yet. */
-export function createSettings(server: McpServer): OpenAISettings {
+export function createSettings(
+  server: Pick<McpServer, "registerTool" | "server">,
+): OpenAISettings {
   const registered = Symbol.for("@openai/mcp-extensions/settings/registered");
   return {
     register<const Fields extends SettingsFields>(
@@ -173,12 +168,12 @@ export function createSettings(server: McpServer): OpenAISettings {
           }),
           annotations: { readOnlyHint: true },
         },
-        async (_args, extra) => ({
+        async (_args, context) => ({
           content: [],
           structuredContent: {
             schema,
             ...(layout === undefined ? {} : { layout }),
-            values: valuesSchema.parse(await options.read(extra)),
+            values: valuesSchema.parse(await options.read(context)),
           },
         }),
       );
@@ -191,14 +186,14 @@ export function createSettings(server: McpServer): OpenAISettings {
               values: valuesSchema,
             }),
           },
-          async ({ set }, extra) => ({
+          async ({ set }, context) => ({
             content: [],
             // The MCP SDK validated set against the partial form of this same schema.
             structuredContent: {
               values: valuesSchema.parse(
                 await options.update(
                   set as Partial<SettingsValues<Fields>>,
-                  extra,
+                  context,
                 ),
               ),
             },

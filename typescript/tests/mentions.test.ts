@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
+import { McpServer } from "@modelcontextprotocol/server";
 import { OpenAIExtensions } from "../src/server/index.js";
 
 test("mention capabilities coexist with settings and retain legacy discovery", async () => {

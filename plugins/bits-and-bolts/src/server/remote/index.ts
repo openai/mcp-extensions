@@ -5,11 +5,7 @@ import { readFile } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import {
-  McpServer,
-  ResourceTemplate,
-  createMcpHandler,
-} from "@modelcontextprotocol/server";
+import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
 import {
   accountFromAuthorization,
   demoAccounts,
@@ -135,14 +131,12 @@ const mcp = createMcpHandler(
       html,
       icons,
       store,
-      resourceTemplate: ResourceTemplate,
       partUriTemplate: "cad://bits-and-bolts/{id}",
       formats: ["stl", "3mf", "step", "stp"],
       assetOrigin: origin,
       wasm: { text: `${origin}/occt-import-js.wasm` },
       elicit: (context, params) =>
         requestFormInput(context, { ...params, key: "form" }),
-      requestMeta: (context) => context.mcpReq._meta,
     });
     return server;
   },

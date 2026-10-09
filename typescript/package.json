@@ -34,6 +34,7 @@
     "test:package": "pnpm run build && node scripts/package-smoke.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/core": "^2.0.0",
     "@cfworker/json-schema": "^4.1.1",
     "zod": "4.4.3"
   },
@@ -44,6 +45,12 @@
   },
   "peerDependenciesMeta": {
     "@modelcontextprotocol/ext-apps": {
+      "optional": true
+    },
+    "@modelcontextprotocol/server": {
+      "optional": true
+    },
+    "@modelcontextprotocol/sdk": {
       "optional": true
     }
   },

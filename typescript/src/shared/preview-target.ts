@@ -1,4 +1,4 @@
-import { ResourceLinkSchema } from "@modelcontextprotocol/sdk/types.js";
+import { ResourceLinkSchema } from "@modelcontextprotocol/core";
 import { z } from "zod";
 
 import { NonBlankStringSchema } from "./strings.js";

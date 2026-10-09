@@ -4,7 +4,10 @@
 
 ### Changes
 
-- Added `OpenAIExtensions.elicitInputLegacy` for MCP Servers that have not upgraded to `2026-07-28`. `elicitInput` remains supported as a deprecated alias.
+- Server helpers now use MCP SDK 2. Pass `ServerContext` to `elicitInputLegacy(context, params, options)` and its deprecated `elicitInput` alias. Settings and mention handlers also receive `ServerContext`.
+- Server-only installations use `@modelcontextprotocol/server`. MCP Apps retain the SDK 1 peer required by `@modelcontextprotocol/ext-apps`.
+
+- Added `OpenAIExtensions.elicitInputLegacy` for connections that predate MCP `2026-07-28`. `elicitInput` remains supported as a deprecated alias.
 - Added `requestFormInput` from `@openai/mcp-extensions/server` for multi round-trip openai form extension elicitations.
 
 ## [0.1.0](https://github.com/openai/mcp-extensions/compare/node-v0.1.0...node-v0.1.0) (2026-09-29)

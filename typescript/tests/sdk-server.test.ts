@@ -1,17 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import {
-  Client as ModernClient,
+  Client,
+  InMemoryTransport,
   StreamableHTTPClientTransport,
   type ElicitResult,
 } from "@modelcontextprotocol/client";
-import {
-  McpServer as ModernServer,
-  createMcpHandler,
-} from "@modelcontextprotocol/server";
+import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import {
   OpenAIExtensions,
@@ -180,21 +175,19 @@ test("legacy forms exchange extended schemas and validate answers through MCP", 
     };
     const received: unknown[] = [];
     client.setRequestHandler(
-      z.object({
-        method: z.literal("openai/elicitation/create"),
-        params: z.unknown(),
-      }),
-      async (request) => {
-        received.push(request.params);
+      "openai/elicitation/create",
+      { params: z.unknown() },
+      async (requestParams) => {
+        received.push(requestParams);
         return reply;
       },
     );
     server.registerTool(
       "choose-drawing",
       { inputSchema: z.object({}) },
-      async () => ({
+      async (_args, context) => ({
         content: [],
-        structuredContent: await extensions.elicitInputLegacy(params),
+        structuredContent: await extensions.elicitInputLegacy(context, params),
       }),
     );
     const pair = InMemoryTransport.createLinkedPair();
@@ -238,7 +231,7 @@ test("MRTR exchanges preserve extended schemas and consume validated retry answe
   const saved: unknown[] = [];
   const handler = createMcpHandler(
     () => {
-      const server = new ModernServer({ name: "forms", version: "1" });
+      const server = new McpServer({ name: "forms", version: "1" });
       server.registerTool(
         "choose-drawing",
         { inputSchema: z.object({}) },
@@ -265,7 +258,7 @@ test("MRTR exchanges preserve extended schemas and consume validated retry answe
     action: "accept",
     content: { source: "file:///drawing.stl" },
   };
-  const client = new ModernClient(
+  const client = new Client(
     { name: "form-consumer", version: "1" },
     {
       versionNegotiation: { mode: { pin: "2026-07-28" } },
@@ -337,7 +330,7 @@ test("MRTR exchanges preserve extended schemas and consume validated retry answe
     reply = { action };
     assert.deepEqual((await choose()).structuredContent, { action });
   }
-  const unsupported = new ModernClient(
+  const unsupported = new Client(
     { name: "unsupported", version: "1" },
     {
       versionNegotiation: { mode: { pin: "2026-07-28" } },

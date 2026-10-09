@@ -7,7 +7,7 @@ import {
   TitledMultiSelectEnumSchemaSchema,
   UntitledMultiSelectEnumSchemaSchema,
   StringSchemaSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+} from "@modelcontextprotocol/core";
 import { z } from "zod";
 
 const optionSchema =
