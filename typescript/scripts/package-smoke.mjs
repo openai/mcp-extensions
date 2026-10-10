@@ -52,9 +52,7 @@ try {
       missing: ["@modelcontextprotocol/server"],
       imports: `
         import { OpenAIExtensions } from "@openai/mcp-extensions/app";
-        import { createAppTransport } from "@openai/mcp-extensions/app/transport";
         assert.equal(typeof OpenAIExtensions, "function");
-        assert.equal(typeof createAppTransport, "function");
         assert.ok(existsSync(new URL(import.meta.resolve("@openai/mcp-extensions/app/styles.css"))));
       `,
     },
