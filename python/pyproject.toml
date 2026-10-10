@@ -1,6 +1,6 @@
 [project]
 name = "openai-mcp-extensions"
-version = "0.2.0"
+version = "0.2.1"
 description = "OpenAI extensions for MCP Python servers."
 readme = "README.md"
 requires-python = ">=3.10"
