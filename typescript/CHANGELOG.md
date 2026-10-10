@@ -10,6 +10,13 @@
 - Added `OpenAIExtensions.elicitInputLegacy` for connections that predate MCP `2026-07-28`. `elicitInput` remains supported as a deprecated alias.
 - Added `requestFormInput` from `@openai/mcp-extensions/server` for multi round-trip openai form extension elicitations.
 
+## [0.2.0](https://github.com/openai/mcp-extensions/compare/node-v0.1.0...node-v0.2.0) (2026-10-09)
+
+
+### Features
+
+* Update extension SDKs ([#31](https://github.com/openai/mcp-extensions/issues/31)) ([faf1c46](https://github.com/openai/mcp-extensions/commit/faf1c46830c4b43bf8f9d69b79798335adba86b5))
+
 ## [0.1.0](https://github.com/openai/mcp-extensions/compare/node-v0.1.0...node-v0.1.0) (2026-09-29)
 
 
