@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 — Unreleased
+## 0.2.0 — 2026-10-10
 
 This release added editable chat drafts and forms that can continue across multiple exchanges. It also updated mention search and settings, migrated TypeScript server helpers to MCP SDK 2, and clarified SDK imports and replacements for older APIs.
 
