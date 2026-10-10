@@ -10,7 +10,3 @@ build/
 .pytest_cache/
 pnpm-lock.yaml
 python/uv.lock
-
-# release-please owns changelog formatting.
-python/CHANGELOG.md
-typescript/CHANGELOG.md

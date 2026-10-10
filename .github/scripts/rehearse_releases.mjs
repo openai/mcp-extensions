@@ -104,7 +104,7 @@ async function rehearse(name, commits, expected) {
       baseline[other],
       "The other package version changed",
     );
-    assert(generated.has(`${packagePath}/CHANGELOG.md`));
+    assert(!generated.has(`${packagePath}/CHANGELOG.md`));
     assert(
       [...generated.keys()].every((file) => !file.startsWith(`${other}/`)),
     );
