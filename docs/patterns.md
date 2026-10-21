@@ -130,10 +130,10 @@ For example, refer to Bits & Bolts' [light](../plugins/bits-and-bolts/assets/ico
 
 Prioritize fast loading for global entrypoints and your MCP Apps so they feel native in ChatGPT. Displaying a global entrypoint when Desktop starts requires three pieces:
 
-| Piece                                                                                                                                                | Cached by ChatGPT? |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| Sidebar menu item / icon                                                                                                                              | Yes                |
-| [UI resource (HTML)](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#ui-resource-format)                           | Yes                |
+| Piece                                                                                                                                                            | Cached by ChatGPT? |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| Sidebar menu item / icon                                                                                                                                         | Yes                |
+| [UI resource (HTML)](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#ui-resource-format)                                 | Yes                |
 | [Tool result](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#2-tool-result-via-uinotificationstool-result-notification) | No                 |
 
 Persist tool results in `localStorage`, which survives Desktop restarts. Use a stale-while-revalidate pattern: render cached data as soon as the app loads, then replace it when fresh tool results arrive.

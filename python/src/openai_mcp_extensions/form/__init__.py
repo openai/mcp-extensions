@@ -8,7 +8,7 @@ from openai_mcp_extensions.form._mrtr import request_form_input
 from openai_mcp_extensions.form._resource_picker import (
     FileUserOptions,
     UserResourceOptions,
-    file_input,
+    file_input,  # pyright: ignore[reportDeprecated]
     resource_input,
 )
 
