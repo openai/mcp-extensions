@@ -13,7 +13,7 @@ import { z } from "zod";
 const optionSchema =
   TitledSingleSelectEnumSchemaSchema.shape.oneOf.element.extend({
     "x-openai-thumbnail": IconSchema.optional(),
-    /** @deprecated Use x-openai-thumbnail. */
+    /** @deprecated Use x-openai-thumbnail instead. */
     "x-openai-preview": IconSchema.optional(),
     description: z.string().optional(),
   });

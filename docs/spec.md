@@ -1,39 +1,32 @@
 # OpenAI MCP Extensions Specification
 
-For app design and compatibility guidance, see:
-
-[patterns.md](patterns.md)
-
-This specification defines extensions to [MCP](https://modelcontextprotocol.io/specification/2025-11-25/index) and [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/c55a3a231fb76303376e059aef9a13367e72731c/specification/draft/apps.mdx) for use across ChatGPT, including ChatGPT Work, ChatGPT Desktop, and ChatGPT mobile apps.
-
-The MCP spec provides capabilities that work across MCP hosts. These extensions allow deeper integration into ChatGPT, enabling you to build richer features for your users than the standard MCP spec allows.
-
 This spec outlines every extension and exactly how it builds on top of the existing MCP spec. In most cases, it is easier to use these extensions via our TypeScript and Python SDKs:
 
-- [TypeScript SDK](../typescript/README.md) (MCP Servers and MCP Apps)
-- [Python SDK](../python/README.md)
+- [TypeScript SDK](https://github.com/openai/mcp-extensions/blob/main/typescript/README.md) (MCP Servers and MCP Apps)
+- [Python SDK](https://github.com/openai/mcp-extensions/blob/main/python/README.md) (MCP Servers only)
 
 `MCP.<Type>` refers to the corresponding type in the [MCP schema reference](https://modelcontextprotocol.io/specification/2026-07-28/schema).
 
 ## Platform Support
 
-This table describes expected support at DevDay launch. Web refers to the Work browser. Classic ChatGPT is excluded. Asterisks indicate platform limitations described in the corresponding sections.
+Web refers to the Work browser, excluding classic ChatGPT. Asterisks link to remaining platform limitations.
 
-| Feature                                                      | Desktop   | Web                                              | iOS                                 | Android                             |
-| ------------------------------------------------------------ | --------- | ------------------------------------------------ | ----------------------------------- | ----------------------------------- |
-| [Global entrypoint](#global-entrypoint)                      | Supported | Supported                                        | Supported                           | Supported                           |
-| [Thread entrypoint](#thread-entrypoint)                      | Supported | Supported                                        | Supported                           | Supported                           |
-| [File entrypoint](#file-extension-entrypoint)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
-| [Structured settings](#structured-settings)                  | Supported | Supported                                        | Supported                           | Supported                           |
-| [Resource display modes](#display-modes)                     | Supported | Supported                                        | Supported                           | Supported                           |
-| [MCP App deep links](#deep-links)                            | Supported | Supported                                        | Supported                           | Not supported                       |
-| [Extended message sending](#uimessage-extensions)            | Supported | Supported                                        | [Supported*](#uimessage-extensions) | [Supported*](#uimessage-extensions) |
-| [Plugin onboarding](#plugin-onboarding)                      | Supported | Supported                                        | Supported                           | Supported                           |
-| [Extended model context](#uiupdate-model-context-extensions) | Supported | [Supported*](#uiupdate-model-context-extensions) | [Supported*](#thumbnails)           | Supported                           |
-| [File opening](#opening-local-files)                         | Supported | Not supported                                    | Not supported                       | Not supported                       |
-| [File resources](#filesystem-access)                         | Supported | Not supported                                    | Not supported                       | Not supported                       |
-| [Composer at-mentions](#composer-at-mentions)                | Supported | Not supported                                    | Not supported                       | Not supported                       |
-| [Extended forms](#openai-form-elicitation)                   | Supported | [Supported*](#resource-selection)                | Not supported                       | Not supported                       |
+| Feature                                                      | Desktop       | Web                                              | iOS                                 | Android                             |
+| ------------------------------------------------------------ | ------------- | ------------------------------------------------ | ----------------------------------- | ----------------------------------- |
+| [Global entrypoint](#global-entrypoint)                      | Supported     | Supported                                        | Supported                           | Supported                           |
+| [Deep links](#deep-links)                                    | Supported     | Supported                                        | Supported                           | Not supported                       |
+| [Thread entrypoint](#thread-entrypoint)                      | Supported     | Supported                                        | Supported                           | Supported                           |
+| [File entrypoint](#file-extension-entrypoint)                | Supported     | Not supported                                    | Not supported                       | Not supported                       |
+| [Resource display modes](#display-modes)                     | Supported     | Supported                                        | Supported                           | Supported                           |
+| [Plugin onboarding](#plugin-onboarding)                      | Supported     | Supported                                        | Supported                           | Supported                           |
+| [Structured settings](#structured-settings)                  | Supported     | Supported                                        | Supported                           | Supported                           |
+| [Extended model context](#uiupdate-model-context-extensions) | Supported     | [Supported*](#uiupdate-model-context-extensions) | [Supported*](#thumbnails)           | Supported                           |
+| [WebMCP](#webmcp)                                            | Supported     | Not supported                                    | Not supported                       | Not supported                       |
+| [Composer at-mentions](#composer-at-mentions)                | Supported     | Supported                                        | Not supported                       | Not supported                       |
+| [Extended message sending](#uimessage-extensions)            | Supported     | Supported                                        | [Supported*](#uimessage-extensions) | Supported                           |
+| [Extended forms](#openai-form-elicitation)                   | Supported     | [Supported*](#resource-selection)                | Not supported                       | Not supported                       |
+| [File resources](#filesystem-access)                         | Supported     | Not supported                                    | Not supported                       | Not supported                       |
+| [File opening](#opening-local-files)                         | Supported     | Not supported                                    | Not supported                       | Not supported                       |
 
 ## Server Capabilities
 
@@ -46,7 +39,7 @@ Servers advertise named capabilities at these locations:
 
 ## MCP App Entrypoints
 
-Normally, [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/c55a3a231fb76303376e059aef9a13367e72731c/specification/draft/apps.mdx) can only be invoked via the model. However, it may be convenient to allow users to open your MCP App via static entrypoints.
+Normally, [MCP Apps](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx) can only be invoked via the model. However, it may be convenient to allow users to open your MCP App via static entrypoints.
 
 You can define up to three entrypoints on any MCP App:
 
@@ -88,8 +81,8 @@ Global entrypoints expose apps that users can open fullscreen from global naviga
 
 #### Behavior Details
 
+- On Desktop: requests that target the current thread, such as `ui/update-model-context` and `ui/message`, use the global entrypoint's thread.
 - The server MUST accept `{}` as the tool arguments when the entrypoint opens.
-- On desktop, global entrypoints open with a composer and thread layout, with the app as a permanent tab. Requests that target the current thread, such as `ui/update-model-context` and `ui/message`, use that thread.
 
 #### Schema
 
@@ -130,10 +123,10 @@ Deep links navigate directly to a particular page within a global entrypoint.
 
 ##### Behavior Details
 
+- On Desktop: use the `codex` URI scheme.
+- On iOS: use the `chatgpt` URI scheme.
 - URI format:
   - `{scheme}://plugins/{pluginId}@{marketplace}/app/{toolName}?path={encodedAppRelativePath}`
-    - `scheme`
-      - `codex` on desktop. `chatgpt` on mobile.
     - `pluginId`
       - MUST be percent-encoded.
       - Can be found via the public ChatGPT plugin URL (`https://chatgpt.com/plugins/{pluginId}`).
@@ -146,7 +139,7 @@ Deep links navigate directly to a particular page within a global entrypoint.
       - The complete app-relative URL, including any query string, MUST be percent-encoded as the `path` query value.
       - The decoded app-relative URL MUST begin with `/` and MUST NOT contain a fragment.
       - If `path` is omitted, the app-relative URL defaults to `/`.
-- MCP Apps receive the specified app-relative URL in `hostContext["openai/deepLink"]` during initialization and through subsequent `ui/notifications/host-context-changed` notifications, following [MCP Apps host-context update semantics](https://github.com/modelcontextprotocol/ext-apps/blob/c55a3a231fb76303376e059aef9a13367e72731c/specification/draft/apps.mdx#L1461-L1471).
+- MCP Apps receive the specified app-relative URL in `hostContext["openai/deepLink"]` during initialization and through subsequent `ui/notifications/host-context-changed` notifications, following [MCP Apps host-context update semantics](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#L1461-L1471).
 
 Web link format:
 
@@ -842,11 +835,9 @@ Request:
 
 ## Display Modes
 
-The MCP Apps specification defines [display modes](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#display-modes) to specify where MCP Apps can be rendered.
+The MCP Apps specification defines [display modes](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#display-modes) to specify where MCP Apps can be rendered. However, [`appCapabilities.availableDisplayModes`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#declaring-support) is available only after app initialization, which can take time. ChatGPT also recognizes `_meta["openai/ui"].availableDisplayModes` on the UI resource content item so it can choose a supported mode immediately.
 
 ![Bits & Bolts in inline and fullscreen display modes](https://github.com/user-attachments/assets/46236a5d-0437-4088-9c52-68a904aca7f2)
-
-[`appCapabilities.availableDisplayModes`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#declaring-support) is available only after the app initializes, which can take time. Set `_meta["openai/ui"].availableDisplayModes` on the UI resource content item so ChatGPT can choose a supported mode immediately.
 
 ### Schema
 
@@ -868,7 +859,7 @@ interface DisplayModes {
 - When the model invokes an MCP App, ChatGPT considers `preferredDisplayMode` when choosing the initial display mode.
 - If `availableDisplayModes` is omitted from `_meta["openai/ui"]`, ChatGPT assumes the app supports all ChatGPT display modes.
 - If `availableDisplayModes` includes both `inline` and `fullscreen`, ChatGPT defaults to `fullscreen` unless `preferredDisplayMode` specifies otherwise.
-- On Desktop, if `availableDisplayModes` is omitted, ChatGPT defaults to `inline` unless a supported `preferredDisplayMode` overrides it.
+- If `_meta["openai/ui"]` is omitted entirely, ChatGPT preserves legacy behavior and defaults to `inline`.
 - ChatGPT uses `fullscreen` for all entrypoints.
 
 ### Examples
@@ -948,10 +939,43 @@ MCP App `initialize` result:
 
 ### Behavior Details
 
-- On web, image content in model context is not yet supported.
-- On Desktop, visible context is grouped in one popover and removed together.
+- On Web: image content in model context is not yet supported.
 - Content block `_meta` is excluded from model input.
 - `ui/update-model-context` is idempotent. Each call replaces the model context previously supplied by the same MCP App instance.
+
+### Groups
+
+![Bits & Bolts context groups](https://github.com/user-attachments/assets/d28c9c41-9bd5-4a81-b008-bd538e5aaf35)
+
+Group metadata labels related content blocks.
+
+```ts
+type ModelContextGroup = {
+  /** Title shared by related content blocks. */
+  title: string;
+};
+```
+
+MCP Apps MAY set `_meta["openai/group"]` to a `ModelContextGroup` object on any content block in `ui/update-model-context`.
+
+The group title MUST be a non-empty string. Content blocks without a usable group title use the "Context" group.
+
+#### Examples
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "ui/update-model-context",
+  "params": {
+    "content": [
+      { "type": "text", "text": "Selected: Bug keycap (1U)", "_meta": { "openai/group": { "title": "Keycaps" } } },
+      { "type": "text", "text": "Selected: OpenAI keycap (1U)", "_meta": { "openai/group": { "title": "Keycaps" } } },
+      { "type": "text", "text": "Selected: Codex Micro joystick cap", "_meta": { "openai/group": { "title": "Controls" } } }
+    ]
+  }
+}
+```
 
 ### Context Changed Notifications
 
@@ -1043,7 +1067,7 @@ MCP Apps MAY set `_meta["openai/thumbnail"]` to an `MCP.Icon` on `text` content 
 
 #### Behavior Details
 
-- `openai/thumbnail` is not yet supported on iOS.
+- On iOS: `openai/thumbnail` is not yet supported.
 
 #### Examples
 
@@ -1097,9 +1121,16 @@ Request:
 | Embedded resource | Supported     |
 | Audio             | Not supported |
 
+### WebMCP
+
+Agents can discover and call tools registered by expanded MCP Apps through `document.modelContext`.
+
+- WebMCP is available only on Desktop.
+- ChatGPT does not support the MCP Apps SDK’s `App.registerTool()`.
+
 ## `ui/message` Extensions
 
-This extension adds metadata to [`ui/message`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#mcp-apps-specific-messages) to control its behavior in ChatGPT.
+This extension adds metadata to [`ui/message`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#mcp-apps-specific-messages) to control its behavior in ChatGPT.
 
 ### Capability Advertisement
 
@@ -1127,8 +1158,8 @@ MCP App `initialize` result:
 
 ### Behavior Details
 
+- On iOS: `ui/message` does not support resource links.
 - `ui/message` supports the [same content types](#supported-content) as `ui/update-model-context`.
-- On iOS, `ui/message` does not support resource links.
 
 ### Titles
 
@@ -1140,13 +1171,12 @@ MCP Apps SHOULD NOT display titled text items as selected. Apps are not notified
 
 ### Prompt Target and Send Behavior
 
-This extension adds metadata to [`ui/message`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx#mcp-apps-specific-messages) to control its behavior in ChatGPT.
+This extension adds metadata to [`ui/message`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#mcp-apps-specific-messages) to control its behavior in ChatGPT.
 
 #### Behavior Details
 
 - Defaults when undefined: `{ target: "active", send: true }`.
-- On iOS and Android, only `{ target: "active", send: true }` is supported.
-- On desktop and the Work browser, `send: false` MUST append content to the active draft or open a fresh editable draft when `target: "new"`, without submitting it.
+- For supported target/send combinations, `send: false` appends content to the active draft or opens a fresh editable draft when `target: "new"`, without submitting it.
 
 #### Schema
 
@@ -1499,6 +1529,12 @@ Response:
 }
 ```
 
+### Numeric Answers
+
+Hosts MUST submit answers for `integer` and `number` fields as JSON numbers.
+
+Servers that require exact numeric text, such as large integers or high-precision decimals, MUST request a `string` field. Hosts MUST preserve those string answers without numeric conversion. Servers are responsible for parsing and validating the text, and MAY use `pattern` to constrain its format.
+
 ### Extended String Schema
 
 Servers MAY add `pattern` to MCP's [StringSchema](https://modelcontextprotocol.io/specification/2025-11-25/schema#stringschema).
@@ -1665,15 +1701,14 @@ Resource selection supports supplied resources, user-added files or directories,
 
 ![Resource picker](https://github.com/user-attachments/assets/a06f0e07-66c8-4952-907a-a624cfd8b277)
 
-**Deprecated:** Use `type: "resource"` instead of `type: "file"`. The old value remains supported as an alias.
-
 #### Behavior Details
 
+- On Web:
+  - Directory selection is unsupported.
+  - Forms requested through MCP Apps support only explicit resource selection without user uploads.
 - Servers declare resource inputs by adding an `x-openai-input` to a `string` (single-select) or `array` (multi-select) form field.
 - Single-select fields submit a URI string.
 - Multi-select fields submit an array of URI strings.
-- On web, directory selection is unsupported.
-- On web, forms requested through MCP Apps support only explicit resource selection without user uploads.
 - Implicit selection always allows user uploads. When `userOptions` is omitted, it defaults to `{ kind: "file" }` with no file-type restrictions. Explicit selection shows no upload input when `userOptions` is omitted.
 - Resource options may include a thumbnail (`_meta["openai/thumbnail"]: MCP.Icon`), a preview (`_meta["openai/preview"]: { target: PreviewTarget }`), or both.
 

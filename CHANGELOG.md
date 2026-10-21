@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.1
+
+This update covers named context groups, mobile message drafts, and app mentions in the Work browser. It also clarifies numeric form answers and marks legacy aliases deprecated.
+
+### Spec changes
+
+- **Context groups:** Document `_meta["openai/group"]: { title: "Keycaps" }` on model-context content blocks, group and individual-item removal, and the default `Context` group.
+- **Mobile messages:** Document iOS and Android support for active and new conversations with either `send` value.
+- **Work browser mentions:** Document resource search from connected hosted apps through the existing `openai/mentions` capability.
+- **Numeric forms:** Clarify that numeric fields return JSON numbers. Use string fields for exact large integers or decimal text. Desktop rejects integer input that would change during numeric conversion.
+- **Form aliases:** Deprecate `x-openai-input.type: "file"` and `x-openai-preview` in favor of `"resource"` and `x-openai-thumbnail`.
+
+### SDK changes
+
+- **Python aliases:** Mark `file_input` and `FileUserOptions` deprecated. Use `resource_input` and `UserResourceOptions`.
+
 ## 0.2.0 — 2026-10-10
 
 This release added editable chat drafts and forms that can continue across multiple exchanges. It also updated mention search and settings, migrated TypeScript server helpers to MCP SDK 2, and clarified SDK imports and replacements for older APIs.

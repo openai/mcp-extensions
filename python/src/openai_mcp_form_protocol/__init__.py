@@ -43,7 +43,12 @@ PreviewTarget = Annotated[McpAppToolTarget | ResourceLink, Field(discriminator="
 
 class _OptionAnnotations(FormModel):
     thumbnail: Icon | None = Field(default=None, alias="x-openai-thumbnail")
-    preview: Icon | None = Field(default=None, alias="x-openai-preview")
+    preview: Icon | None = Field(
+        default=None,
+        alias="x-openai-preview",
+        description="Deprecated: use x-openai-thumbnail instead.",
+        json_schema_extra={"deprecated": True},
+    )
 
     @model_validator(mode="after")
     def validate_annotations(self) -> _OptionAnnotations:
@@ -135,7 +140,9 @@ class _ResourceOption(Resource):
 
 
 class _ResourceInput(FormModel):
-    type: Literal["resource", "file"]
+    type: Literal["resource", "file"] = Field(
+        description='"file" is deprecated. Use "resource" instead.',
+    )
     options: list[_ResourceOption]
     selection: Literal["explicit", "implicit"] | None = None
     user_options: _UserResourceOptions | None = Field(default=None, alias="userOptions")

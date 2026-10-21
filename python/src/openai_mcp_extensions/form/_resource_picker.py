@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from mcp_types import Resource
 from pydantic import JsonValue
-from typing_extensions import NotRequired, TypedDict
+from typing_extensions import NotRequired, TypedDict, deprecated
 
 OPENAI_INPUT_KEY = "x-openai-input"
 
@@ -20,6 +20,7 @@ class UserResourceOptions(TypedDict):
 
 
 FileUserOptions = UserResourceOptions
+"""Deprecated: use UserResourceOptions instead."""
 
 
 def resource_input(
@@ -37,13 +38,14 @@ def resource_input(
     return _input("resource", options, selection, user_options)
 
 
+@deprecated("Use resource_input instead.", category=None)
 def file_input(
     *,
     options: Sequence[Resource] = (),
     selection: Literal["implicit", "explicit"] | None = None,
     user_options: UserResourceOptions | None = None,
 ) -> dict[str, JsonValue]:
-    """Build file-picker metadata with the legacy ``file`` discriminator."""
+    """Deprecated: use resource_input instead."""
     return _input("file", options, selection, user_options)
 
 

@@ -8,7 +8,9 @@ const userOptionsSchema = z.object({
   accept: z.array(z.string()).optional(),
 });
 const fileInputSchema = z.object({
-  type: z.enum(["resource", "file"]),
+  type: z
+    .enum(["resource", "file"])
+    .describe('"file" is deprecated. Use "resource" instead.'),
   options: z.array(ResourceSchema),
   userOptions: userOptionsSchema.optional(),
   selection: z.enum(["explicit", "implicit"]).optional(),

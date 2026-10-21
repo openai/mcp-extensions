@@ -22,7 +22,7 @@ For example, see how Bits & Bolts [adjusts its layout for narrow screens](../plu
 
 Respect ChatGPT's safe-area insets, as defined in the [MCP Apps specification](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx). Keep content and controls clear of those edges.
 
-For example, see how Bits & Bolts [applies ChatGPT's insets](../plugins/bits-and-bolts/src/app/controller.ts#L680) at startup and whenever they change, then [uses them as body padding](../plugins/bits-and-bolts/src/app/index.html#L20).
+For example, see how Bits & Bolts [applies ChatGPT's insets](../plugins/bits-and-bolts/src/app/controller.ts#L680) at startup and whenever they change, then [uses them as padding on a safe-area wrapper](../plugins/bits-and-bolts/src/app/index.html#L27).
 
 ### Display modes
 
@@ -40,32 +40,105 @@ Use `@openai/mcp-extensions/app/styles.css` for controls that follow ChatGPT's a
 
 For example, see how Bits & Bolts [applies ChatGPT's theme and style variables](../plugins/bits-and-bolts/src/app/controller.ts#L695) throughout the library and parts view.
 
-## Model Context
+## Model Context and Interaction
 
-Users should feel that the model understands what they see and do in an MCP App. Use the decision table below to keep the user, MCP App, and model aligned on the app's current state.
+Design your MCP App so the model can use it like another user, with visibility into everything the user sees and the ability to take the same actions on their behalf.
 
-| Mechanism                                      | When to use it                                                                                                             |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `ui/update-model-context`: `content`           | Attach content the user explicitly selects, such as an item they add to chat.                                              |
-| `ui/update-model-context`: `structuredContent` | Provide high-level background context the model needs to understand what has changed this turn, such as a page navigation. |
-| Server-side MCP tools                          | Let the model fetch additional details about changes reported in model context or perform mutations.                       |
+ChatGPT supports providing context to the model both visibly in the composer and invisibly as background context.
 
-For example, see how Bits & Bolts handles a user opening the Yeet keycap:
+### Explicit context
 
-1. The user adds the part as a chat attachment. The app [adds the selected part](../plugins/bits-and-bolts/src/app/controller.ts#L586) as a `content` block and [sends it through `ui/update-model-context`](../plugins/bits-and-bolts/src/app/controller.ts#L651).
-2. As the user navigates or adjusts the view, the app [updates `structuredContent`](../plugins/bits-and-bolts/src/app/controller.ts#L605) with the page, part, camera, and other view details so the model knows what the user is looking at.
-3. If the model needs more information about the part, the server's [`cad.search` tool](../plugins/bits-and-bolts/src/server/register.ts#L271) returns part details and links to notes.
-4. If the user asks to change the view, the model can call the server's [`cad.configureView` tool](../plugins/bits-and-bolts/src/server/register.ts#L305) to select a camera preset or render mode. The app applies the returned settings.
+Use `content` when the user selects something to include in the chat, such as annotating or highlighting a specific part.
 
-![Yeet keycap attached to chat and identified by the model](https://github.com/user-attachments/assets/664fb0a9-64e6-4d2d-ae45-3c750c285358)
+For example, Bits & Bolts sends the annotation in [`content`](../plugins/bits-and-bolts/src/app/controller.ts#L707), with its [text and metadata](../plugins/bits-and-bolts/src/app/point-annotations.ts#L188):
 
-## Entrypoints
+```json
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Point 1 on Yeet keycap: Make this edge rounder"
+    }
+  ]
+}
+```
 
-### Global entrypoint caching
+### Background context
 
-Consider caching the data needed to render your global entrypoint so it opens immediately on subsequent visits. MCP App local storage is persistent on desktop restart and browser page refresh, so you can show cached results immediately after restarting ChatGPT and refresh them in the background. Your global entrypoint's sidebar tab and widget HTML are already cached by default.
+Use `structuredContent` as the user interacts with the app normally, such as navigating to a specific part.
 
-For example, Bits & Bolts restores its cached Parts Library before fetching fresh results. It stores part metadata and isometric previews under `bits-and-bolts:library:v1`:
+For example, Bits & Bolts sends the current view in [`structuredContent`](../plugins/bits-and-bolts/src/app/controller.ts#L720):
+
+```json
+{
+  "structuredContent": {
+    "page": "viewer",
+    "schematic": "Yeet keycap",
+    "camera": "isometric"
+  }
+}
+```
+
+### WebMCP app tools
+
+Use [WebMCP app tools](spec.md#webmcp) to let the model interact directly with the app like a user.
+
+For example, register a tool that reads the app's current page title:
+
+```js
+document.modelContext?.registerTool({
+  name: "get_title",
+  description: "Read the current page title.",
+  inputSchema: { type: "object", properties: {} },
+  annotations: { readOnlyHint: true },
+  async execute() {
+    return JSON.stringify({ title: document.title });
+  },
+});
+```
+
+### MCP server tools
+
+Use MCP server tools to provide additional details about a resource or change it on the server.
+
+For example, Bits & Bolts' [`cad.search`](../plugins/bits-and-bolts/src/server/register.ts#L278) returns part details and links to notes:
+
+```json
+{
+  "query": "Yeet"
+}
+```
+
+## Global Entrypoint
+
+### Icons
+
+Use the [Figma icon template](https://www.figma.com/design/k1TPwkpYDbcRQrU34nUnNL/Plugin-icon-template?node-id=3933-543&t=25xd5JgJ3UgQGsFi-0) as a starting point for an icon with:
+
+- A simple, single-color stroke design.
+- A transparent background.
+- A 20 × 20 viewport and 1.33px strokes.
+
+For example, refer to Bits & Bolts' [light](../plugins/bits-and-bolts/assets/icon.svg) and [dark](../plugins/bits-and-bolts/assets/icon-dark.svg) entrypoint icons below:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../plugins/bits-and-bolts/assets/icon-dark.svg">
+  <img src="../plugins/bits-and-bolts/assets/icon.svg" alt="Bits & Bolts icon" width="64" height="64">
+</picture>
+
+### Caching
+
+Prioritize fast loading for global entrypoints and your MCP Apps so they feel native in ChatGPT. Displaying a global entrypoint when Desktop starts requires three pieces:
+
+| Piece                                                                                                                                                | Cached by ChatGPT? |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| Sidebar menu item / icon                                                                                                                              | Yes                |
+| [UI resource (HTML)](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#ui-resource-format)                           | Yes                |
+| [Tool result](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#2-tool-result-via-uinotificationstool-result-notification) | No                 |
+
+Persist tool results in `localStorage`, which survives Desktop restarts. Use a stale-while-revalidate pattern: render cached data as soon as the app loads, then replace it when fresh tool results arrive.
+
+For example, Bits & Bolts Remote renders its [cached Parts Library](../plugins/bits-and-bolts/src/app/library-cache.ts), then [refreshes it in the background](../plugins/bits-and-bolts/src/app/controller.ts#L31):
 
 ```ts
 localStorage.setItem(
@@ -79,24 +152,8 @@ localStorage.setItem(
 );
 ```
 
-[plugins/bits-and-bolts/src/app/controller.ts](../plugins/bits-and-bolts/src/app/controller.ts#L39)
+## Entrypoint Declaration
 
-[plugins/bits-and-bolts/src/app/library-cache.ts](../plugins/bits-and-bolts/src/app/library-cache.ts)
+Prefer a dedicated tool for each entrypoint. Giving the same tool multiple entrypoints can confuse users.
 
-### Global icons
-
-Use the [Figma icon template](https://www.figma.com/design/k1TPwkpYDbcRQrU34nUnNL/Plugin-icon-template?node-id=3933-543&t=25xd5JgJ3UgQGsFi-0) as a starting point for an icon with:
-
-- A simple, single-color stroke design.
-- A transparent background.
-- A 20 × 20 viewport and 1.33px strokes.
-
-For example, refer to Bits & Bolts' [entrypoint icon](../plugins/bits-and-bolts/src/server/remote/assets/icon.svg) below:
-
-<img src="../plugins/bits-and-bolts/src/server/remote/assets/icon.svg" alt="Bits & Bolts Remote icon" width="64" height="64">
-
-### Declaration
-
-Declare at most one entrypoint per tool, and give each entrypoint a distinct `title`. Thread and file entrypoint titles should describe the view they open rather than repeat the plugin name.
-
-For example, see how Bits & Bolts names its global entrypoint [Bits & Bolts](../plugins/bits-and-bolts/src/server/register.ts#L204) for the full library and its thread entrypoint [Parts Tray](../plugins/bits-and-bolts/src/server/register.ts#L245) for a parts list alongside the conversation.
+For example, Bits & Bolts uses [`cad.browse`](../plugins/bits-and-bolts/src/server/register.ts#L204) for its global entrypoint and [`cad.tray`](../plugins/bits-and-bolts/src/server/register.ts#L245) for its thread entrypoint.
