@@ -11,22 +11,22 @@ This spec outlines every extension and exactly how it builds on top of the exist
 
 Web refers to the Work browser, excluding classic ChatGPT. Asterisks link to remaining platform limitations.
 
-| Feature                                                      | Desktop       | Web                                              | iOS                                 | Android                             |
-| ------------------------------------------------------------ | ------------- | ------------------------------------------------ | ----------------------------------- | ----------------------------------- |
-| [Global entrypoint](#global-entrypoint)                      | Supported     | Supported                                        | Supported                           | Supported                           |
-| [Deep links](#deep-links)                                    | Supported     | Supported                                        | Supported                           | Not supported                       |
-| [Thread entrypoint](#thread-entrypoint)                      | Supported     | Supported                                        | Supported                           | Supported                           |
-| [File entrypoint](#file-extension-entrypoint)                | Supported     | Not supported                                    | Not supported                       | Not supported                       |
-| [Resource display modes](#display-modes)                     | Supported     | Supported                                        | Supported                           | Supported                           |
-| [Plugin onboarding](#plugin-onboarding)                      | Supported     | Supported                                        | Supported                           | Supported                           |
-| [Structured settings](#structured-settings)                  | Supported     | Supported                                        | Supported                           | Supported                           |
-| [Extended model context](#uiupdate-model-context-extensions) | Supported     | [Supported*](#uiupdate-model-context-extensions) | [Supported*](#thumbnails)           | Supported                           |
-| [WebMCP](#webmcp)                                            | Supported     | Not supported                                    | Not supported                       | Not supported                       |
-| [Composer at-mentions](#composer-at-mentions)                | Supported     | Supported                                        | Not supported                       | Not supported                       |
-| [Extended message sending](#uimessage-extensions)            | Supported     | Supported                                        | [Supported*](#uimessage-extensions) | Supported                           |
-| [Extended forms](#openai-form-elicitation)                   | Supported     | [Supported*](#resource-selection)                | Not supported                       | Not supported                       |
-| [File resources](#filesystem-access)                         | Supported     | Not supported                                    | Not supported                       | Not supported                       |
-| [File opening](#opening-local-files)                         | Supported     | Not supported                                    | Not supported                       | Not supported                       |
+| Feature                                                      | Desktop   | Web                                              | iOS                                 | Android       |
+| ------------------------------------------------------------ | --------- | ------------------------------------------------ | ----------------------------------- | ------------- |
+| [Global entrypoint](#global-entrypoint)                      | Supported | Supported                                        | Supported                           | Supported     |
+| [Deep links](#deep-links)                                    | Supported | Supported                                        | Supported                           | Not supported |
+| [Thread entrypoint](#thread-entrypoint)                      | Supported | Supported                                        | Supported                           | Supported     |
+| [File entrypoint](#file-extension-entrypoint)                | Supported | Not supported                                    | Not supported                       | Not supported |
+| [Resource display modes](#display-modes)                     | Supported | Supported                                        | Supported                           | Supported     |
+| [Plugin onboarding](#plugin-onboarding)                      | Supported | Supported                                        | Supported                           | Supported     |
+| [Structured settings](#structured-settings)                  | Supported | Supported                                        | Supported                           | Supported     |
+| [Extended model context](#uiupdate-model-context-extensions) | Supported | [Supported*](#uiupdate-model-context-extensions) | [Supported*](#thumbnails)           | Supported     |
+| [WebMCP](#webmcp)                                            | Supported | Not supported                                    | Not supported                       | Not supported |
+| [Composer at-mentions](#composer-at-mentions)                | Supported | Supported                                        | Not supported                       | Not supported |
+| [Extended message sending](#uimessage-extensions)            | Supported | Supported                                        | [Supported*](#uimessage-extensions) | Supported     |
+| [Extended forms](#openai-form-elicitation)                   | Supported | [Supported*](#resource-selection)                | Not supported                       | Not supported |
+| [File resources](#filesystem-access)                         | Supported | Not supported                                    | Not supported                       | Not supported |
+| [File opening](#opening-local-files)                         | Supported | Not supported                                    | Not supported                       | Not supported |
 
 ## Server Capabilities
 
@@ -969,9 +969,21 @@ The group title MUST be a non-empty string. Content blocks without a usable grou
   "method": "ui/update-model-context",
   "params": {
     "content": [
-      { "type": "text", "text": "Selected: Bug keycap (1U)", "_meta": { "openai/group": { "title": "Keycaps" } } },
-      { "type": "text", "text": "Selected: OpenAI keycap (1U)", "_meta": { "openai/group": { "title": "Keycaps" } } },
-      { "type": "text", "text": "Selected: Codex Micro joystick cap", "_meta": { "openai/group": { "title": "Controls" } } }
+      {
+        "type": "text",
+        "text": "Selected: Bug keycap (1U)",
+        "_meta": { "openai/group": { "title": "Keycaps" } }
+      },
+      {
+        "type": "text",
+        "text": "Selected: OpenAI keycap (1U)",
+        "_meta": { "openai/group": { "title": "Keycaps" } }
+      },
+      {
+        "type": "text",
+        "text": "Selected: Codex Micro joystick cap",
+        "_meta": { "openai/group": { "title": "Controls" } }
+      }
     ]
   }
 }
