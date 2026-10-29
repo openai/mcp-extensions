@@ -918,25 +918,38 @@ export function startApp() {
     });
   }
 
-  app.registerTool(
-    "read_view",
-    {
-      description: "Read the current part, camera, zoom, and unsaved edits.",
-      inputSchema: z.strictObject({}),
-      annotations: { readOnlyHint: true },
+  const openPartSchema = z.strictObject({
+    partId: z.string(),
+    discardUnsaved: z.boolean().optional(),
+  });
+  const configureViewSchema = z.strictObject({
+    camera: z.enum(renderer.cameras).optional(),
+    mode: z.enum(renderer.modes).optional(),
+    zoom: z.number().min(0.3).max(3).optional(),
+    grid: z.boolean().optional(),
+    units: z.enum(["mm", "in"]).optional(),
+    yawRadians: z.number().optional(),
+    pitchRadians: z.number().optional(),
+  });
+  document.modelContext?.registerTool({
+    name: "read_view",
+    description: "Read the current part, camera, zoom, and unsaved edits.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
     },
-    () => viewContext(),
-  );
-  app.registerTool(
-    "open_part",
-    {
-      description: "Open a library part in the current viewer.",
-      inputSchema: z.strictObject({
-        partId: z.string(),
-        discardUnsaved: z.boolean().optional(),
-      }),
+    annotations: { readOnlyHint: true },
+    async execute() {
+      return JSON.stringify(viewContext());
     },
-    async (args) => {
+  });
+  document.modelContext?.registerTool({
+    name: "open_part",
+    description: "Open a library part in the current viewer.",
+    inputSchema: z.toJSONSchema(openPartSchema),
+    async execute(input) {
+      const args = openPartSchema.parse(input);
       if (state.dirty && !args.discardUnsaved)
         throw Error(
           "The view has unsaved geometry. Save it first or explicitly discard it.",
@@ -944,25 +957,16 @@ export function startApp() {
       const part = catalog.find((part) => part.id === args.partId);
       if (!part) throw Error("Unknown part: " + args.partId);
       await openPart(part, args.discardUnsaved === true);
-      return viewContext();
+      return JSON.stringify(viewContext());
     },
-  );
-  app.registerTool(
-    "configure_view",
-    {
-      description:
-        "Adjust the current viewer's camera, display, zoom, grid, and units.",
-      inputSchema: z.strictObject({
-        camera: z.enum(renderer.cameras).optional(),
-        mode: z.enum(renderer.modes).optional(),
-        zoom: z.number().min(0.3).max(3).optional(),
-        grid: z.boolean().optional(),
-        units: z.enum(["mm", "in"]).optional(),
-        yawRadians: z.number().optional(),
-        pitchRadians: z.number().optional(),
-      }),
-    },
-    (args) => {
+  });
+  document.modelContext?.registerTool({
+    name: "configure_view",
+    description:
+      "Adjust the current viewer's camera, display, zoom, grid, and units.",
+    inputSchema: z.toJSONSchema(configureViewSchema),
+    async execute(input) {
+      const args = configureViewSchema.parse(input);
       if (state.page !== "viewer" || !renderer.triangleCount())
         throw Error("Open a part first.");
       if (args.camera !== undefined) camera(args.camera);
@@ -983,37 +987,36 @@ export function startApp() {
       });
       draw();
       queueContext();
-      return viewContext();
+      return JSON.stringify(viewContext());
     },
-  );
-  app.registerTool(
-    "rotate_geometry",
-    {
-      description:
-        "Rotate the current part 90 degrees around X as an unsaved edit.",
-      inputSchema: z.strictObject({}),
+  });
+  document.modelContext?.registerTool({
+    name: "rotate_geometry",
+    description:
+      "Rotate the current part 90 degrees around X as an unsaved edit.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
     },
-    () => {
+    async execute() {
       rotateGeometry();
-      return viewContext();
+      return JSON.stringify(viewContext());
     },
-  );
-  app.registerTool(
-    "save_file",
-    {
-      description:
-        "Save edits to the open STL file without overwriting external changes.",
-      inputSchema: z.strictObject({}),
+  });
+  document.modelContext?.registerTool({
+    name: "save_file",
+    description:
+      "Save edits to the open STL file without overwriting external changes.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
     },
-    async () => {
-      const result = await save();
-      return {
-        content: [{ type: "text", text: JSON.stringify(result) }],
-        structuredContent: result,
-        isError: result.outcome !== "saved",
-      };
+    async execute() {
+      return JSON.stringify(await save());
     },
-  );
+  });
   app.ontoolresult = (payload) => {
     const initial = initialToolResultPending;
     initialToolResultPending = false;
