@@ -62,9 +62,17 @@ Entrypoint icons are resolved in the following priority order:
 2. The MCP Server icon for local MCP Servers, or the registered app logo for hosted MCP Apps. Server icons come from `_meta["io.modelcontextprotocol/serverInfo"]["icons"]` in `server/discover`, or `serverInfo["icons"]` in `initialize` for MCP Servers that do not implement `server/discover`.
 3. A generic fallback icon.
 
+#### Behavior Details
+
+- On Desktop: an open tab uses the MCP App document’s icon (`<link rel="icon">`) when available and falls back to the entrypoint icon.
+
 ### Titles
 
-Entrypoints use the [MCP tool display name](https://modelcontextprotocol.io/specification/latest/schema#tool). An open tab uses the MCP App’s current `document.title` when nonempty and falls back to the tool display name.
+Entrypoints use the [MCP tool display name](https://modelcontextprotocol.io/specification/latest/schema#tool).
+
+#### Behavior Details
+
+- On Desktop: an open tab uses the MCP App’s current `document.title` when nonempty and falls back to the tool display name.
 
 ### Global Entrypoint
 
