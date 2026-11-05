@@ -77,7 +77,7 @@ All entrypoints will be rendered with a title.
 
 Global entrypoints expose apps that users can open fullscreen from global navigation.
 
-![Global CAD Parts Library](https://github.com/user-attachments/assets/f0db35e7-5bdf-4305-accc-125f93a5f6f8)
+![Global CAD Parts Library](resources/01-global-library.png)
 
 #### Behavior Details
 
@@ -205,7 +205,7 @@ codex://plugins/bits-and-bolts/app/cad.browse?path=%2Fparts%2Fhex-bolt
 
 Thread entrypoints let users manually open an MCP App as a new content tab within a thread.
 
-![CAD Parts Tray in a thread side panel](https://github.com/user-attachments/assets/d737d943-4738-4150-8e09-4205d8720b0e)
+![CAD Parts Tray in a thread side panel](resources/02-thread-tray.png)
 
 #### Behavior Details
 
@@ -252,7 +252,7 @@ File extension entrypoints let MCP Apps advertise support for file types (for ex
 
 File extension entrypoints use extended MCP Resource APIs for reading, subscribing to, and updating the files that invoked them.
 
-![STL file opened in a CAD file extension handler](https://github.com/user-attachments/assets/bfa5165b-e4eb-441d-bd9d-3c6514e8fa9a)
+![STL file opened in a CAD file extension handler](resources/03-file-viewer.png)
 
 #### Capability Advertisement
 
@@ -523,7 +523,7 @@ Response:
 
 Structured settings let MCP Apps contribute settings to the plugin details page within ChatGPT. ChatGPT will render the settings with native controls that match the look and feel of ChatGPT on the current platform.
 
-![Structured settings on the Bits & Bolts plugin page](https://github.com/user-attachments/assets/43723fb8-3da7-4d0d-ae0e-b5fe8c795347)
+![Structured settings on the Bits & Bolts plugin page](resources/07-settings-entrypoint.png)
 
 ### Capability Advertisement
 
@@ -837,7 +837,7 @@ Request:
 
 The MCP Apps specification defines [display modes](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#display-modes) to specify where MCP Apps can be rendered. However, [`appCapabilities.availableDisplayModes`](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/draft/apps.mdx#declaring-support) is available only after app initialization, which can take time. ChatGPT also recognizes `_meta["openai/ui"].availableDisplayModes` on the UI resource content item so it can choose a supported mode immediately.
 
-![Bits & Bolts in inline and fullscreen display modes](https://github.com/user-attachments/assets/46236a5d-0437-4088-9c52-68a904aca7f2)
+![Bits & Bolts in inline and fullscreen display modes](resources/11-display-modes.png)
 
 ### Schema
 
@@ -883,7 +883,7 @@ interface DisplayModes {
 
 Onboarding provides a setup skill for users to run after installation. Setup invokes the onboarding skill in a new conversation, or in the existing thread if the plugin was installed during a conversation.
 
-![Plugin onboarding](https://github.com/user-attachments/assets/1d6a3041-30a0-4574-8e7d-8a6f84620291)
+![Plugin onboarding](resources/12-plugin-onboarding.png)
 
 ### Behavior Details
 
@@ -909,7 +909,7 @@ Manifest:
 
 This extension clarifies and extends the behavior of `ui/update-model-context`.
 
-![Text, resource link, embedded resource, and image in the model context popover](https://github.com/user-attachments/assets/c8416a03-bf28-45a2-b08a-4ee36412db94)
+![Text, resource link, embedded resource, and image in the model context popover](resources/08-model-context-attachments.png)
 
 ### Capability Advertisement
 
@@ -945,7 +945,7 @@ MCP App `initialize` result:
 
 ### Groups
 
-![Bits & Bolts context groups](https://github.com/user-attachments/assets/d28c9c41-9bd5-4a81-b008-bd538e5aaf35)
+![Bits & Bolts context groups](resources/model-context-groups.png)
 
 Group metadata labels related content blocks.
 
@@ -1330,7 +1330,7 @@ Response:
 
 Normally, users can only at-mention a plugin or MCP Server. The at-mention capability allows your plugin to expose a searchable list of items (people, files, channels, etc.) that the user can mention individually in their prompt.
 
-![CAD Parts Library results in the composer at-mention picker](https://github.com/user-attachments/assets/10a47355-98a7-4550-a170-46e0062e656e)
+![CAD Parts Library results in the composer at-mention picker](resources/05-composer-mention.png)
 
 ### Behavior Details
 
@@ -1603,7 +1603,7 @@ Titled `const` options support an optional `description`.
 
 Thumbnails allow you to specify an image as the user-visible choice instead of just text.
 
-![Select with thumbnails](https://github.com/user-attachments/assets/9d2a6108-d2d9-4c1a-84c4-50189d56a8ee)
+![Select with thumbnails](resources/14-form-select-thumbnails.png)
 
 #### Behavior Details
 
@@ -1656,7 +1656,7 @@ Request:
 
 Suggested values let users choose from predefined options or enter free-form text. Array fields support selecting multiple options and adding custom text. The same field constraints apply to suggested and entered values.
 
-![Suggested values and a custom entry in the Bits & Bolts review form](https://github.com/user-attachments/assets/e72af9aa-a231-459d-bc48-ab335ce8eaeb)
+![Suggested values and a custom entry in the Bits & Bolts review form](resources/15-form-suggested-values.png)
 
 #### Behavior Details
 
@@ -1711,7 +1711,7 @@ Elicitation result with suggested and entered values:
 
 Resource selection supports supplied resources, user-added files or directories, or both.
 
-![Resource picker](https://github.com/user-attachments/assets/a06f0e07-66c8-4952-907a-a624cfd8b277)
+![Resource picker](resources/13-form-resource-picker.png)
 
 #### Behavior Details
 
