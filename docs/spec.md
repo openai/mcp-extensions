@@ -64,14 +64,7 @@ Entrypoint icons are resolved in the following priority order:
 
 ### Titles
 
-All entrypoints will be rendered with a title.
-
-#### Behavior Details
-
-- The title comes from the first defined property in the following list on your MCP App’s `tools/list` entry:
-  - `title`
-  - `annotations["title"]`
-  - `name`
+Entrypoints use the [MCP tool display name](https://modelcontextprotocol.io/specification/latest/schema#tool). An open tab uses the MCP App’s current `document.title` when nonempty and falls back to the tool display name.
 
 ### Global Entrypoint
 
