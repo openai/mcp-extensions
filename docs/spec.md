@@ -1051,22 +1051,28 @@ Notification (context cleared):
 }
 ```
 
-### Titles
+<a id="titles-1"></a>
 
-Titles provide human-readable labels for text attachments and alt text for images.
+### Content titles and descriptions
 
-MCP Apps MAY set `_meta["openai/title"]` to a non-empty string on `text` and `image` content blocks.
+MCP Apps MAY set either or both of these non-empty strings in the block-level `_meta` of a `text`, `image`, or embedded `resource` block:
 
-#### Examples
+- `openai/title` labels the attachment and provides alt text for images.
+- `openai/description` appears below the title in the attachment list.
 
-Text block in `ui/update-model-context` with a title:
+For example, a Figma layer can show its name and type while supplying its data in the same block:
 
 ```json
 {
-  "type": "text",
-  "text": "Selected: agent dial",
+  "type": "resource",
   "_meta": {
-    "openai/title": "Agent dial"
+    "openai/title": "Icon",
+    "openai/description": "Frame"
+  },
+  "resource": {
+    "uri": "figma://files/abc123/nodes/1:11",
+    "mimeType": "application/json",
+    "text": "{\"id\":\"1:11\",\"name\":\"Icon\",\"type\":\"FRAME\"}"
   }
 }
 ```
@@ -1173,9 +1179,11 @@ MCP App `initialize` result:
 - On iOS: `ui/message` does not support resource links.
 - `ui/message` supports the [same content types](#supported-content) as `ui/update-model-context`.
 
-### Titles
+<a id="titles-2"></a>
 
-Messages support the same [content titles](#titles-1) as model context.
+### Message titles and descriptions
+
+Messages support the same [content titles and descriptions](#content-titles-and-descriptions) as model context.
 
 Untitled text becomes ordinary message text, while titled text becomes a labeled inline item that can be removed as a single unit.
 
