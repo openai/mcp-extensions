@@ -83,6 +83,10 @@ For example, Bits & Bolts sends the current view in [`structuredContent`](../plu
 }
 ```
 
+### Naming MCP App tools
+
+Prefer tool names that state the exact action the tool takes. For example, use `open_checkout_cart` for a tool that opens the user's checkout cart.
+
 ### WebMCP app tools
 
 Use [WebMCP app tools](spec.md#webmcp) to let the model interact directly with the app like a user.
