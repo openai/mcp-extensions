@@ -85,7 +85,7 @@ For example, Bits & Bolts sends the current view in [`structuredContent`](../plu
 
 ### Naming MCP App tools
 
-For MCP App tools that open UI, prefer `open_<ui_element>`. For example, use `open_checkout_cart` to open the checkout cart. A name like `checkout_cart_side_panel` leaves the action unclear.
+For MCP App tools that open UI, prefer `open_<ui_element>` so the model can predict the tool name. For example, use `open_checkout_cart` to open the checkout cart.
 
 ### WebMCP app tools
 
