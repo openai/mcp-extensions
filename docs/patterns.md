@@ -12,6 +12,10 @@ For example, see how Bits & Bolts [checks the desktop version](../plugins/bits-a
 
 ## MCP App UI
 
+### Opening plugin URLs
+
+If certain URLs should open in your MCP App by default, add a skill whose description names the URL patterns and the plugin UI to open. For example: “When the user opens a `https://example.com/boards/<id>` link, open that board in the Example Boards MCP App instead of the browser.”
+
 ### Responsive layouts
 
 Consider how your app looks across devices. Extensions work across platforms, but your UI still needs to adapt to the available space. Check entrypoint views at a few representative sizes, such as 375 × 812, 768 × 1024, and 1440 × 900.
