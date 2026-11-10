@@ -85,7 +85,7 @@ For example, Bits & Bolts sends the current view in [`structuredContent`](../plu
 
 ### Naming MCP App tools
 
-Prefer tool names that state the exact action the tool takes. For example, use `open_checkout_cart` for a tool that opens the user's checkout cart.
+Prefer tool names that state the exact action the tool takes. For a tool that opens the checkout cart, use `open_checkout_cart`. A name like `checkout_cart_side_panel` leaves the action unclear.
 
 ### WebMCP app tools
 
